@@ -21,7 +21,15 @@ starting with a 2D steady-state heat (Poisson) solver.
 
 ## Status
 
-Early development. The first milestone is the heat solver.
+In active development. The core library is working:
+
+* `Grid` — bounds-checked 2D field container
+* Three iterative solvers (Jacobi, Gauss-Seidel, SOR), validated against
+  each other on identical problems
+* SOR relaxation factor study ([docs/omega_study.md](docs/omega_study.md)) —
+  measured optimum ω = 1.50 vs. theoretical ~1.53 for the test grid
+
+Next up: the 2D steady-state heat application with PPM heatmap output.
 
 ## License
 
