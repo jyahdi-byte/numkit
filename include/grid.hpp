@@ -24,10 +24,15 @@ public:
         return temps[r * cols + c];
     }
 
-    int getRows(){
+    const double& at(int r, int c) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0);
+        return temps[r * cols + c];
+    }
+
+    int getRows() const {
         return rows;
     }
-    int getCols(){
+    int getCols() const {
         return cols;
     }
 };
