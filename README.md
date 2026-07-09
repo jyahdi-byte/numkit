@@ -44,13 +44,15 @@ by the library.*
 
 ## Roadmap
 
+**Heat Solver**
 * [x] Grid data structure for 2D scalar fields
 * [x] Jacobi, Gauss-Seidel, and SOR iterative solvers
 * [x] 2D steady-state heat solver (`apps/heat`) with PPM heatmap output
 * [x] Convergence and validation studies in `docs/`
 * [x] Multithreaded Jacobi solver
-* [ ] Persistent worker pool (std::barrier)
-* [ ] 2D truss finite element solver (fall 2026)
+
+**Truss Solver**
+* [ ] 2D truss finite element solver 
 
 ## Building
 
