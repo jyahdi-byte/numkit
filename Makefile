@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe
+all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp tests/test_solvers.cpp
 	g++ -std=c++17 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -17,3 +17,6 @@ test_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/tes
 
 bench_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/bench_mt.cpp
 	g++ -std=c++17 -Wall -pthread -I include tests/bench_mt.cpp -o bench_mt.exe
+
+test_omega_auto.exe: include/grid.hpp include/sor.hpp tests/test_omega_auto.cpp
+	g++ -std=c++17 -Wall -I include tests/test_omega_auto.cpp -o test_omega_auto.exe

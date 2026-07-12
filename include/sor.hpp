@@ -3,6 +3,8 @@
 #include "grid.hpp"
 #include <cmath>
 
+double PI = 3.14159265358979;
+
 int sor_solve(Grid& g, double tol, int max_iter, double omega){
     for (int k = 0; k < max_iter; k++){
         double maxChange = 0;
@@ -24,6 +26,12 @@ int sor_solve(Grid& g, double tol, int max_iter, double omega){
         }
     }
     return max_iter;
+}
+
+int sor_solve(Grid& g, double tol, int max_iter) {
+    double h = 1.0 / (g.getRows() - 1);
+    double omega = 2.0 / (1.0 + std::sin(PI * h));
+    return sor_solve(g, tol, max_iter, omega);
 }
 
 #endif
