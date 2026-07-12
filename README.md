@@ -25,7 +25,8 @@ rendered to PPM by the library.*
   per interior point.
 * **Iterative solvers** — Jacobi, Gauss-Seidel, and SOR, implemented
   from scratch and validated against each other and against exact
-  solutions.
+  solutions. SOR also has a closed-form auto-tuned variant that
+  computes its relaxation factor from the grid size.
 * **Parallelism** — a multithreaded Jacobi solver (std::thread) with
   a measured, diagnosed speedup study.
 * **Visualization** — renders solved fields to PPM images with a
@@ -41,6 +42,10 @@ rendered to PPM by the library.*
   237 / 124 / 29 sweeps. SOR at its measured optimal relaxation
   factor (ω = 1.50, theory ~1.53) is 8× cheaper than Jacobi.
   Study: [docs/omega_study.md](docs/omega_study.md).
+* Auto-tuned SOR (closed-form ω) converges in 298 sweeps versus 3,849
+  for a fixed ω = 1.5 on a 100×100 grid, a 12× improvement, showing
+  the fixed guess tuned for a small grid stops being a good guess as
+  the grid grows.
 * Multithreaded Jacobi reaches 1.63× speedup at 2 threads. The study
   identifies memory bandwidth as the ceiling and per-sweep thread
   respawn as the cost of going wider.
@@ -51,17 +56,10 @@ rendered to PPM by the library.*
 **Heat solver (complete)**
 * [x] Grid data structure for 2D scalar fields
 * [x] Jacobi, Gauss-Seidel, and SOR iterative solvers
+* [x] Closed-form auto-tuned SOR
 * [x] 2D steady-state heat solver (`apps/heat`) with PPM heatmap output
 * [x] Convergence and validation studies in `docs/`
 * [x] Multithreaded Jacobi solver
-
-**Truss finite element solver (in progress)**
-* [ ] Element stiffness matrix for a 2D bar (derivation in `docs/`)
-* [ ] Truss data structures: joints, bars, loads, supports
-* [ ] Global stiffness assembly
-* [ ] Boundary conditions and direct solve (LU/Cholesky) of K·u = f
-* [ ] Member forces; validation against a hand-solved truss
-* [ ] Rendering: deformed shape with members colored by tension/compression
 
 **Possible extensions**
 * [ ] Persistent worker pool (std::barrier) to eliminate thread respawn cost
