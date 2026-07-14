@@ -24,3 +24,7 @@ test_omega_auto.exe: include/grid.hpp include/sor.hpp tests/test_omega_auto.cpp
 cuda-test: include/grid.hpp cuda/grid_transfer_test.cu
 	nvcc -I include cuda/grid_transfer_test.cu -o grid_transfer_test.exe
 	./grid_transfer_test.exe
+
+jacobi-validate: include/grid.hpp include/jacobi.hpp cuda/jacobi_validate.cu
+	nvcc -I include cuda/jacobi_validate.cu -o jacobi_validate.exe
+	./jacobi_validate.exe
