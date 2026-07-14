@@ -1,0 +1,35 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  cpu-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build CPU targets
+        run: make all
+      - name: Run CPU tests
+        run: |
+          ./test_solvers.exe
+          ./test_mt.exe
+          ./test_omega_auto.exe
+
+  cuda-compile-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.15
+        id: cuda-toolkit
+        with:
+          cuda: '12.4.0'
+
+      # NOTE: GitHub-hosted runners have no NVIDIA GPU. This step proves
+      # the CUDA code compiles (catches syntax/type errors on every push)
+      # but CANNOT execute the kernel or verify assertions in
+      # cuda/grid_transfer_test.cu. Actual test runs happen locally on a
+      # GPU (Colab) before trusting a commit.
+      - name: Compile CUDA test (build-check only, not run)
+        run: nvcc -I include cuda/grid_transfer_test.cu -o grid_transfer_test.exe

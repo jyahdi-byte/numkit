@@ -20,3 +20,7 @@ bench_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/be
 
 test_omega_auto.exe: include/grid.hpp include/sor.hpp tests/test_omega_auto.cpp
 	g++ -std=c++17 -Wall -I include tests/test_omega_auto.cpp -o test_omega_auto.exe
+
+cuda-test: include/grid.hpp cuda/grid_transfer_test.cu
+	nvcc -I include cuda/grid_transfer_test.cu -o grid_transfer_test.exe
+	./grid_transfer_test.exe

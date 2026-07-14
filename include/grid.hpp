@@ -35,6 +35,10 @@ public:
     int getCols() const {
         return cols;
     }
+
+    double* getTempsPtr(){
+        return temps.data();
+    }
 };
 
 #endif
