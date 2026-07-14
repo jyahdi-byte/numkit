@@ -1,5 +1,7 @@
 # numkit
 
+[![build](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
+
 A numerical computing library written from scratch in modern C++, with
 no external dependencies.
 
@@ -51,9 +53,25 @@ rendered to PPM by the library.*
   respawn as the cost of going wider.
   Study: [docs/threading_study.md](docs/threading_study.md).
 
+## GPU port
+
+A CUDA port of the Jacobi solver lives in `cuda/`. It's built and
+tested separately from the CPU code, since it needs `nvcc` and an
+NVIDIA GPU — developed and run on Colab's T4 instances. Same stencil
+computation as the CPU version, just moved from `std::thread` to GPU
+threads.
+
+* [x] Environment check — confirmed `nvcc` compiles and a kernel runs
+      end to end.
+* [x] `Grid` moved to device memory and back, verified against the
+      original with real assertions (`cuda/grid_transfer_test.cu`).
+* [ ] Naive Jacobi kernel, validated against the CPU `jacobi_solve`.
+* [ ] Benchmarking methodology, then a real GPU vs. CPU speedup study.
+
 ## Roadmap
 
 **Heat solver (complete)**
+
 * [x] Grid data structure for 2D scalar fields
 * [x] Jacobi, Gauss-Seidel, and SOR iterative solvers
 * [x] Closed-form auto-tuned SOR
@@ -62,6 +80,7 @@ rendered to PPM by the library.*
 * [x] Multithreaded Jacobi solver
 
 **Possible extensions**
+
 * [ ] Persistent worker pool (std::barrier) to eliminate thread respawn cost
 * [ ] Red-black ordering for parallel Gauss-Seidel/SOR
 
@@ -73,6 +92,17 @@ Requires g++ and make. From the repo root:
 
 builds the test programs and the heat app. Run `./heat.exe` to solve
 the demo problem and write `heat.ppm`.
+
+The CUDA target needs `nvcc` and an NVIDIA GPU, which this repo
+doesn't assume you have locally:
+
+    make cuda-test
+
+builds and runs the GPU grid-transfer test — do this on Colab, not
+your own machine, unless you actually have an NVIDIA GPU. Every push
+is checked by GitHub Actions: the CPU build is compiled and run for
+real, the CUDA build is compile-checked only, since GitHub's runners
+have no GPU.
 
 ## License
 
