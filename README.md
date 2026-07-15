@@ -29,8 +29,9 @@ rendered to PPM by the library.*
   from scratch and validated against each other and against exact
   solutions. SOR also has a closed-form auto-tuned variant that
   computes its relaxation factor from the grid size.
-* **Parallelism** — a multithreaded Jacobi solver (std::thread) with
-  a measured, diagnosed speedup study.
+* **Parallelism** — a multithreaded CPU Jacobi solver (std::thread)
+  with a measured, diagnosed speedup study, and a CUDA port (`cuda/`)
+  of the same solver, in progress.
 * **Visualization** — renders solved fields to PPM images with a
   blue-to-red color map.
 
@@ -52,6 +53,11 @@ rendered to PPM by the library.*
   identifies memory bandwidth as the ceiling and per-sweep thread
   respawn as the cost of going wider.
   Study: [docs/threading_study.md](docs/threading_study.md).
+* Naive CUDA Jacobi kernel (`cuda/bench_gpu.cu`, one thread per
+  interior point, no shared-memory optimization yet): 93.7 ms mean
+  across 10 trials (σ ≈ 1.1 ms) for 10,000 sweeps on a 100×100 grid,
+  Tesla T4. Not yet a CPU comparison — that's a fair-fight question
+  for after the kernel is optimized, not before.
 
 ## GPU port
 
@@ -65,8 +71,17 @@ threads.
       end to end.
 * [x] `Grid` moved to device memory and back, verified against the
       original with real assertions (`cuda/grid_transfer_test.cu`).
-* [ ] Naive Jacobi kernel, validated against the CPU `jacobi_solve`.
-* [ ] Benchmarking methodology, then a real GPU vs. CPU speedup study.
+* [x] Naive Jacobi kernel, one thread per interior point, validated
+      against the CPU `jacobi_solve` to a `1e-9` tolerance
+      (`cuda/jacobi_validate.cu`).
+* [x] Benchmarking methodology — optimized build flags
+      (`-O3 -arch=sm_75`), warm-up runs discarded before timing,
+      10 timed trials, mean and standard deviation reported
+      (`cuda/bench_gpu.cu`, stats in `include/stats.hpp`).
+* [ ] Shared-memory tiling, coalesced access, halo handling.
+* [ ] Grid/block size sweep study.
+* [ ] Manufactured-solution convergence check on the GPU kernel.
+* [ ] GPU vs. CPU speedup write-up in `docs/`.
 
 ## Roadmap
 
@@ -93,16 +108,18 @@ Requires g++ and make. From the repo root:
 builds the test programs and the heat app. Run `./heat.exe` to solve
 the demo problem and write `heat.ppm`.
 
-The CUDA target needs `nvcc` and an NVIDIA GPU, which this repo
-doesn't assume you have locally:
+The CUDA targets need `nvcc` and an NVIDIA GPU, which this repo
+doesn't assume you have locally — run these on Colab, not your own
+machine, unless you actually have an NVIDIA GPU:
 
-    make cuda-test
+    make cuda-test        # grid transfer round-trip test
+    make jacobi-validate   # naive kernel vs. CPU jacobi_solve
+    make bench-gpu          # timed benchmark: warm-up + 10 trials, mean/stddev
 
-builds and runs the GPU grid-transfer test — do this on Colab, not
-your own machine, unless you actually have an NVIDIA GPU. Every push
-is checked by GitHub Actions: the CPU build is compiled and run for
-real, the CUDA build is compile-checked only, since GitHub's runners
-have no GPU.
+Every push is checked by GitHub Actions: the CPU build is compiled
+and run for real, the CUDA build is compile-checked only (all three
+`cuda/*.cu` files), since GitHub's runners have no GPU — actual test
+execution stays a local Colab run before trusting a commit.
 
 ## License
 
