@@ -28,3 +28,7 @@ cuda-test: include/grid.hpp cuda/grid_transfer_test.cu
 jacobi-validate: include/grid.hpp include/jacobi.hpp cuda/jacobi_validate.cu
 	nvcc -I include cuda/jacobi_validate.cu -o jacobi_validate.exe
 	./jacobi_validate.exe
+
+bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp cuda/bench_gpu.cu
+	nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu.exe
+	./bench_gpu.exe
