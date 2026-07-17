@@ -6,7 +6,7 @@ __global__ void jacobi_kernel(double* d_old, double* d_new, int rows, int cols) 
     if (index >= (rows - 2) * (cols - 2)) return;
 
     int row = index / (cols - 2);
-    int col = index % (cols - 2);
+    int col = index % (cols - 2); 
     int i = row + 1;
     int j = col + 1;
 

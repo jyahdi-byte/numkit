@@ -29,11 +29,12 @@ jobs:
       # NOTE: GitHub-hosted runners have no NVIDIA GPU. This step proves
       # the CUDA code compiles (catches syntax/type errors on every push)
       # but CANNOT execute the kernels or verify assertions in
-      # cuda/grid_transfer_test.cu, cuda/jacobi_validate.cu, or
-      # cuda/bench_gpu.cu. Actual test runs happen locally on a GPU
-      # (Colab) before trusting a commit.
+      # cuda/grid_transfer_test.cu, cuda/jacobi_validate.cu,
+      # cuda/bench_gpu.cu, or cuda/jacobi_tiled_validate.cu. Actual test
+      # runs happen locally on a GPU (Colab) before trusting a commit.
       - name: Compile CUDA tests (build-check only, not run)
         run: |
           nvcc -I include cuda/grid_transfer_test.cu -o grid_transfer_test.exe
           nvcc -I include cuda/jacobi_validate.cu -o jacobi_validate.exe
           nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu
+          nvcc -I include cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe

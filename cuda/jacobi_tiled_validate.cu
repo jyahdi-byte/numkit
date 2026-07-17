@@ -1,10 +1,8 @@
-#include <iostream>
 #include <cassert>
 #include <cmath>
 #include "grid.hpp"
 #include "jacobi.hpp"
-#include "jacobi_kernel.cuh"
-
+#include "jacobi_tiled_kernel.cuh"
 
 int main(){
     Grid g(100,100);
@@ -24,12 +22,11 @@ int main(){
     cudaMemcpy(d_old, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_new, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
 
+    dim3 threadsPerBlock(16,16);
+    dim3 numBlocks((rows + 16 - 1) / 16, (cols + 16 - 1) / 16);
 
-    int interior = (rows - 2) * (cols - 2); 
-    int threadsPerBlock = 256;
-    int numBlocks = (interior + threadsPerBlock - 1) / threadsPerBlock;
     for (int i = 0; i < sweeps; i++){
-        jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
+        jacobi_tiled_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
         cudaDeviceSynchronize();
 
         double* temp = d_old;

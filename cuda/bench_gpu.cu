@@ -31,7 +31,7 @@ int main(){
             cudaDeviceSynchronize();
 
             double* temp = d_old;
-            d_old = d_new;
+            d_old = d_new; 
             d_new = temp;
         }
 

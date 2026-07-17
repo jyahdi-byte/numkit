@@ -32,3 +32,7 @@ jacobi-validate: include/grid.hpp include/jacobi.hpp cuda/jacobi_validate.cu
 bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp cuda/bench_gpu.cu
 	nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu.exe
 	./bench_gpu.exe
+
+jacobi-tiled-validate: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_tiled_validate.cu
+	nvcc -I include cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe
+	./jacobi_tiled_validate.exe
