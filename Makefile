@@ -36,3 +36,7 @@ bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp cuda/ben
 jacobi-tiled-validate: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_tiled_validate.cu
 	nvcc -I include cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe
 	./jacobi_tiled_validate.exe
+
+bench-tiled-sweep: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stats.hpp cuda/bench_tiled_sweep.cu
+	nvcc -I include -O3 -arch=sm_75 cuda/bench_tiled_sweep.cu -o bench_tiled_sweep.exe
+	./bench_tiled_sweep.exe

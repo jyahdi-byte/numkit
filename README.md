@@ -31,7 +31,8 @@ rendered to PPM by the library.*
   computes its relaxation factor from the grid size.
 * **Parallelism** — a multithreaded CPU Jacobi solver (std::thread)
   with a measured, diagnosed speedup study, and a CUDA port (`cuda/`)
-  of the same solver, in progress.
+  of the same solver: naive and shared-memory-tiled kernels, both
+  validated and benchmarked.
 * **Visualization** — renders solved fields to PPM images with a
   blue-to-red color map.
 
@@ -54,10 +55,16 @@ rendered to PPM by the library.*
   respawn as the cost of going wider.
   Study: [docs/threading_study.md](docs/threading_study.md).
 * Naive CUDA Jacobi kernel (`cuda/bench_gpu.cu`, one thread per
-  interior point, no shared-memory optimization yet): 93.7 ms mean
+  interior point, no shared-memory optimization): 93.7 ms mean
   across 10 trials (σ ≈ 1.1 ms) for 10,000 sweeps on a 100×100 grid,
-  Tesla T4. Not yet a CPU comparison — that's a fair-fight question
-  for after the kernel is optimized, not before.
+  Tesla T4.
+* Shared-memory tiled kernel with halo handling, swept across block
+  sizes 8×8 through 32×32 (`cuda/bench_tiled_sweep.cu`): 8×8 wins at
+  85.4 ms mean (σ ≈ 0.24 ms), beating the naive kernel on the same
+  workload. Larger blocks were consistently slower (104 ms at
+  32×32) — fewer blocks resident per SM means less work available
+  to hide memory-fetch stalls, which matters more for a memory-bound
+  kernel like Jacobi than a compute-bound one.
 
 ## GPU port
 
@@ -78,8 +85,11 @@ threads.
       (`-O3 -arch=sm_75`), warm-up runs discarded before timing,
       10 timed trials, mean and standard deviation reported
       (`cuda/bench_gpu.cu`, stats in `include/stats.hpp`).
-* [ ] Shared-memory tiling, coalesced access, halo handling.
-* [ ] Grid/block size sweep study.
+* [x] Shared-memory tiling with halo handling, dynamic block size
+      via `extern __shared__`, validated against CPU `jacobi_solve`
+      (`include/jacobi_tiled_kernel.cuh`, `cuda/jacobi_tiled_validate.cu`).
+* [x] Grid/block size sweep study — 8×8 through 32×32, 8×8 wins
+      (`cuda/bench_tiled_sweep.cu`).
 * [ ] Manufactured-solution convergence check on the GPU kernel.
 * [ ] GPU vs. CPU speedup write-up in `docs/`.
 
@@ -112,12 +122,14 @@ The CUDA targets need `nvcc` and an NVIDIA GPU, which this repo
 doesn't assume you have locally — run these on Colab, not your own
 machine, unless you actually have an NVIDIA GPU:
 
-    make cuda-test        # grid transfer round-trip test
-    make jacobi-validate   # naive kernel vs. CPU jacobi_solve
-    make bench-gpu          # timed benchmark: warm-up + 10 trials, mean/stddev
+    make cuda-test              # grid transfer round-trip test
+    make jacobi-validate        # naive kernel vs. CPU jacobi_solve
+    make bench-gpu              # naive kernel: warm-up + 10 trials, mean/stddev
+    make jacobi-tiled-validate  # tiled kernel vs. CPU jacobi_solve
+    make bench-tiled-sweep      # block-size sweep: 8x8, 16x16, 24x24, 32x32
 
 Every push is checked by GitHub Actions: the CPU build is compiled
-and run for real, the CUDA build is compile-checked only (all three
+and run for real, the CUDA build is compile-checked only (all five
 `cuda/*.cu` files), since GitHub's runners have no GPU — actual test
 execution stays a local Colab run before trusting a commit.
 
