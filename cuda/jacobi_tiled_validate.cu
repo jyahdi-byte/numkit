@@ -23,10 +23,10 @@ int main(){
     cudaMemcpy(d_new, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16,16);
-    dim3 numBlocks((rows + 16 - 1) / 16, (cols + 16 - 1) / 16);
+    dim3 numBlocks((rows + threadsPerBlock.x - 1) / threadsPerBlock.x, (cols + threadsPerBlock.x - 1) / threadsPerBlock.x);
 
     for (int i = 0; i < sweeps; i++){
-        jacobi_tiled_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
+        jacobi_tiled_kernel<<<numBlocks, threadsPerBlock, (threadsPerBlock.x + 2) * (threadsPerBlock.x + 2) * sizeof(double)>>>(d_old, d_new, rows, cols);
         cudaDeviceSynchronize();
 
         double* temp = d_old;
