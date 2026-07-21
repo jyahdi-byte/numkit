@@ -2,7 +2,7 @@
 #include <cmath>
 #include "grid.hpp"
 #include "jacobi.hpp"
-#include "jacobi_tiled_kernel.cuh"
+#include "jacobi_tiled_kernel.cuh" 
 
 int main(){
     Grid g(100,100);

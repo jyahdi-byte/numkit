@@ -10,9 +10,9 @@ __global__ void jacobi_tiled_kernel(double* d_old, double* d_new, int rows, int 
     if (i < rows-1 && j < cols-1){
         tile[(threadIdx.x + 1) * tileWidth + (threadIdx.y + 1)] = d_old[i * cols + j];
         if (threadIdx.y == 0){ tile[(threadIdx.x + 1) * tileWidth + threadIdx.y] = d_old[i * cols + (j-1)]; }
-        if (threadIdx.y == blockDim.x - 1){ tile[(threadIdx.x + 1) * tileWidth + threadIdx.y + 2] = d_old[i * cols + (j+1)]; }
+        if (threadIdx.y == blockDim.x - 1 || j == cols - 2){ tile[(threadIdx.x + 1) * tileWidth + threadIdx.y + 2] = d_old[i * cols + (j+1)]; }
         if (threadIdx.x == 0){ tile[(threadIdx.x) * tileWidth + (threadIdx.y + 1)] = d_old[(i - 1) * cols + j]; }
-        if (threadIdx.x == blockDim.x - 1){ tile[(threadIdx.x + 2) * tileWidth + (threadIdx.y + 1)] = d_old[(i + 1) * cols + j]; }
+        if (threadIdx.x == blockDim.x - 1 || i == rows - 2){ tile[(threadIdx.x + 2) * tileWidth + (threadIdx.y + 1)] = d_old[(i + 1) * cols + j]; }
     }   
     __syncthreads(); 
 
@@ -22,4 +22,4 @@ __global__ void jacobi_tiled_kernel(double* d_old, double* d_new, int rows, int 
     }
 }
 
-#endif
+#endif 

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include "grid.hpp"
-#include "sor.hpp"
+#include "sor.hpp" 
 
 const double PI = 3.14159265358979323846;
 

@@ -39,3 +39,4 @@ jobs:
           nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu
           nvcc -I include cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe
           nvcc -I include -O3 -arch=sm_75 cuda/bench_tiled_sweep.cu -o bench_tiled_sweep
+          nvcc -std=c++20 -I include cuda/jacobi_convergence.cu -o jacobi_convergence

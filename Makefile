@@ -40,3 +40,7 @@ jacobi-tiled-validate: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_
 bench-tiled-sweep: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stats.hpp cuda/bench_tiled_sweep.cu
 	nvcc -I include -O3 -arch=sm_75 cuda/bench_tiled_sweep.cu -o bench_tiled_sweep.exe
 	./bench_tiled_sweep.exe
+
+jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_convergence.cu
+	nvcc -std=c++20 -I include cuda/jacobi_convergence.cu -o jacobi_convergence.exe
+	./jacobi_convergence.exe
