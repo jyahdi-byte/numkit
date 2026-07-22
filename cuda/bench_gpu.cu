@@ -3,7 +3,7 @@
 #include <vector>
 #include "grid.hpp"
 #include "jacobi_kernel.cuh"
-#include "stats.hpp"
+#include "stats.hpp" 
 
 int main(){
     Grid g(100,100);

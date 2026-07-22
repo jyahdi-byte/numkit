@@ -44,3 +44,7 @@ bench-tiled-sweep: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stat
 jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_convergence.cu
 	nvcc -std=c++20 -I include cuda/jacobi_convergence.cu -o jacobi_convergence.exe
 	./jacobi_convergence.exe
+
+bench_cpu.exe: include/grid.hpp include/stats.hpp tests/bench_cpu.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/bench_cpu.cpp -o bench_cpu.exe
+	./bench_cpu.exe

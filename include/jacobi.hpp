@@ -13,7 +13,7 @@ int jacobi_solve(Grid& g, double tol, int max_iter){
                 newg.at(i,j) = (g.at(i+1,j) + g.at(i-1,j) + g.at(i,j+1) + g.at(i,j-1))/4;
                 change = std::abs(newg.at(i,j) - g.at(i,j));
                 if (change >= maxChange){
-                    maxChange = change;
+                    maxChange = change; 
                 }
             }
         }
