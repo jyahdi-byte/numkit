@@ -96,8 +96,6 @@ threads.
       (`include/jacobi_tiled_kernel.cuh`, `cuda/jacobi_tiled_validate.cu`).
 * [x] Grid/block size sweep study — 8×8 through 32×32, 8×8 wins
       (`cuda/bench_tiled_sweep.cu`).
-* [ ] Manufactured-solution convergence check on the GPU kernel.
-* [ ] GPU vs. CPU speedup write-up in `docs/`.
 
 ## Roadmap
 
@@ -111,12 +109,6 @@ threads.
 * [x] Multithreaded Jacobi solver
 * [x] Persistent worker pool (`std::barrier`), replacing per-sweep
       thread respawn
-
-**Possible extensions**
-
-* [ ] Red-black ordering for parallel Gauss-Seidel/SOR
-* [ ] Large-grid CPU-vs-GPU rematch (see GPU port checklist above),
-      using the worker pool as the CPU baseline
 
 ## Building
 
