@@ -29,10 +29,11 @@ rendered to PPM by the library.*
   from scratch and validated against each other and against exact
   solutions. SOR also has a closed-form auto-tuned variant that
   computes its relaxation factor from the grid size.
-* **Parallelism** — a multithreaded CPU Jacobi solver (std::thread)
-  with a measured, diagnosed speedup study, and a CUDA port (`cuda/`)
-  of the same solver: naive and shared-memory-tiled kernels, both
-  validated and benchmarked.
+* **Parallelism** — a multithreaded CPU Jacobi solver with a measured,
+  diagnosed speedup study, since upgraded to a persistent worker pool
+  (`std::barrier`) that creates threads once instead of every sweep,
+  and a CUDA port (`cuda/`) of the same solver: naive and
+  shared-memory-tiled kernels, both validated and benchmarked.
 * **Visualization** — renders solved fields to PPM images with a
   blue-to-red color map.
 
@@ -54,6 +55,11 @@ rendered to PPM by the library.*
   identifies memory bandwidth as the ceiling and per-sweep thread
   respawn as the cost of going wider.
   Study: [docs/threading_study.md](docs/threading_study.md).
+* Persistent worker pool rewrite (`jacobi_mt.hpp`) closes the
+  respawn cost directly — threads are created once and synchronized
+  every sweep with `std::barrier` instead of being recreated each
+  round. Re-verified against the single-threaded solver: identical
+  iteration count, zero difference in the converged grid.
 * Naive CUDA Jacobi kernel (`cuda/bench_gpu.cu`, one thread per
   interior point, no shared-memory optimization): 93.7 ms mean
   across 10 trials (σ ≈ 1.1 ms) for 10,000 sweeps on a 100×100 grid,
@@ -103,11 +109,14 @@ threads.
 * [x] 2D steady-state heat solver (`apps/heat`) with PPM heatmap output
 * [x] Convergence and validation studies in `docs/`
 * [x] Multithreaded Jacobi solver
+* [x] Persistent worker pool (`std::barrier`), replacing per-sweep
+      thread respawn
 
 **Possible extensions**
 
-* [ ] Persistent worker pool (std::barrier) to eliminate thread respawn cost
 * [ ] Red-black ordering for parallel Gauss-Seidel/SOR
+* [ ] Large-grid CPU-vs-GPU rematch (see GPU port checklist above),
+      using the worker pool as the CPU baseline
 
 ## Building
 
