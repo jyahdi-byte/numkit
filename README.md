@@ -110,6 +110,39 @@ threads.
 * [x] Persistent worker pool (`std::barrier`), replacing per-sweep
       thread respawn
 
+**In progress**
+
+* [ ] Real test assertions — `test_solvers.exe` currently prints
+      sweep counts and a sample grid value instead of asserting
+      against expected results; CI compiles and runs it but doesn't
+      check correctness yet
+* [ ] Red-black ordering, a parallelizable reformulation of
+      Gauss-Seidel
+* [ ] Conjugate gradient solver
+
+**Next: hyperbolic PDEs (1D advection, then wave)**
+
+The heat solver is elliptic — it settles to a steady state. Hyperbolic
+problems move or oscillate instead of settling, which calls for a
+different approach: explicit time-stepping instead of relaxation,
+upwind stencils instead of centered ones, and a CFL stability limit
+in place of a convergence tolerance.
+
+* [x] CFL and upwind derivation from first principles — why the
+      numerical domain of dependence has to contain the true one
+* [ ] 1D grid with periodic boundary conditions
+* [ ] Single-threaded upwind solver, validated against the exact
+      translating solution
+* [ ] Space-time diagram visualization
+* [ ] CFL enforcement in code, including a deliberate CFL > 1 run
+      shown failing on purpose
+* [ ] Exact-solution test wired into CI
+* [ ] Numerical diffusion vs. Courant number study
+
+The wave equation — leapfrog time-stepping, with energy conservation
+as the validation method instead of shape-matching — is a deferred
+stretch goal once advection is closed out.
+
 ## Building
 
 Requires g++ and make. From the repo root:
