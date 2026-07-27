@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe
+all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -48,3 +48,6 @@ jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_ker
 bench_cpu.exe: include/grid.hpp include/stats.hpp include/n_jacobi.hpp tests/bench_cpu.cpp
 	g++ -std=c++20 -Wall -O2 -I include tests/bench_cpu.cpp -o bench_cpu.exe
 	./bench_cpu.exe
+
+test_advection.exe: include/grid1d.hpp include/advection.hpp tests/test_advection.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/test_advection.cpp -o test_advection.exe
