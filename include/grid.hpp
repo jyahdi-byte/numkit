@@ -17,7 +17,7 @@ public:
         for (int i = 0; i < r * c; i++){
             temps.push_back(0);
         }
-    }
+    } 
 
     double& at(int r, int c){
         assert(r < rows && r >= 0 && c < cols && c >= 0);
@@ -29,16 +29,10 @@ public:
         return temps[r * cols + c];
     }
 
-    int getRows() const {
-        return rows;
-    }
-    int getCols() const {
-        return cols;
-    }
+    int getRows() const {return rows;}
+    int getCols() const {return cols;}
 
-    double* getTempsPtr(){
-        return temps.data();
-    }
+    double* getTempsPtr(){return temps.data();}
 };
 
 #endif
