@@ -110,17 +110,7 @@ threads.
 * [x] Persistent worker pool (`std::barrier`), replacing per-sweep
       thread respawn
 
-**In progress**
-
-* [ ] Real test assertions — `test_solvers.exe` currently prints
-      sweep counts and a sample grid value instead of asserting
-      against expected results; CI compiles and runs it but doesn't
-      check correctness yet
-* [ ] Red-black ordering, a parallelizable reformulation of
-      Gauss-Seidel
-* [ ] Conjugate gradient solver
-
-**Next: hyperbolic PDEs (1D advection, then wave)**
+**Hyperbolic PDEs: 1D advection (in progress)**
 
 The heat solver is elliptic — it settles to a steady state. Hyperbolic
 problems move or oscillate instead of settling, which calls for a
@@ -130,18 +120,37 @@ in place of a convergence tolerance.
 
 * [x] CFL and upwind derivation from first principles — why the
       numerical domain of dependence has to contain the true one
-* [ ] 1D grid with periodic boundary conditions
-* [ ] Single-threaded upwind solver, validated against the exact
-      translating solution
-* [ ] Space-time diagram visualization
-* [ ] CFL enforcement in code, including a deliberate CFL > 1 run
-      shown failing on purpose
+* [x] `Grid1D`, a periodic 1D grid with wraparound indexing
+      (`include/grid1d.hpp`)
+* [x] Single-threaded upwind solver (`include/advection.hpp`),
+      conservation-checked with a real assertion
+      (`tests/test_advection.cpp`)
+* [x] Space-time diagram visualization — one PPM row per timestep,
+      `write_ppm` templated to take either a `Grid` or a
+      `SpaceTimeLog` (`include/space_time_log.hpp`, `include/ppm.hpp`)
+* [x] CFL enforcement — Courant number is a direct input, `Δt` is
+      derived from it (`compute_dt`/`compute_cn`); a violation
+      reports the actual offending value instead of a bare assert,
+      and the deliberate CFL > 1 demo lives in its own file
+      (`tests/demo_cfl_violation.cpp`) so it can crash on purpose
+      without threatening the real test suite
 * [ ] Exact-solution test wired into CI
 * [ ] Numerical diffusion vs. Courant number study
 
 The wave equation — leapfrog time-stepping, with energy conservation
 as the validation method instead of shape-matching — is a deferred
 stretch goal once advection is closed out.
+
+**Backlog**
+
+* [ ] Real test assertions for the heat solver — `test_solvers.exe`
+      still just prints sweep counts and a sample grid value instead
+      of asserting against expected results; CI compiles and runs it
+      but doesn't check correctness yet. `test_advection.cpp` already
+      proves the pattern works, just not retrofitted here yet.
+* [ ] Red-black ordering, a parallelizable reformulation of
+      Gauss-Seidel
+* [ ] Conjugate gradient solver
 
 ## Building
 
