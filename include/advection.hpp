@@ -1,13 +1,25 @@
 #ifndef ADVECTION_HPP
 #define ADVECTION_HPP
 
+#include <iostream>
 #include <cassert>
 #include "grid1d.hpp"
 #include "space_time_log.hpp"
 
-int advection_solve(Grid1D& u, int num_steps, double c, double dt, SpaceTimeLog& log){
-    double cn = c * dt / u.getDx();
+double compute_dt(double cn, double dx, double c){
     assert(cn <= 1);
+    return cn * dx / c;
+}
+
+double compute_cn(double dt, double dx, double c){
+    return c * dt / dx;
+}
+
+int advection_solve(Grid1D& u, int num_steps, double c, double cn, SpaceTimeLog& log){
+    if (cn > 1){
+        std::cout << "cn = " << cn << ", exceeds limit of 1";
+        assert(false);
+    }
     Grid1D new_u(u.getPoints(), u.getDx());
     for (int k = 0; k < num_steps; k++){
         log.setRow(k, u);

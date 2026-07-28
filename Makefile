@@ -51,3 +51,6 @@ bench_cpu.exe: include/grid.hpp include/stats.hpp include/n_jacobi.hpp tests/ben
 
 test_advection.exe: include/grid1d.hpp include/advection.hpp include/space_time_log.hpp tests/test_advection.cpp
 	g++ -std=c++20 -Wall -O2 -I include tests/test_advection.cpp -o test_advection.exe 
+
+demo_cfl_violation.exe: include/grid1d.hpp include/advection.hpp tests/demo_cfl_violation.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/demo_cfl_violation.cpp -o demo_cfl_violation.exe 
