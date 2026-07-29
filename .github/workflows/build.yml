@@ -14,6 +14,8 @@ jobs:
           ./test_solvers.exe
           ./test_mt.exe
           ./test_omega_auto.exe
+          ./test_advection.exe
+          ./test_advection_exact.exe
 
   cuda-compile-check:
     runs-on: ubuntu-latest
