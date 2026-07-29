@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe
+all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -54,3 +54,6 @@ test_advection.exe: include/grid1d.hpp include/advection.hpp include/space_time_
 
 demo_cfl_violation.exe: include/grid1d.hpp include/advection.hpp tests/demo_cfl_violation.cpp
 	g++ -std=c++20 -Wall -O2 -I include tests/demo_cfl_violation.cpp -o demo_cfl_violation.exe 
+
+test_advection_exact.exe: include/grid1d.hpp include/advection.hpp tests/test_advection_exact.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/test_advection_exact.cpp -o test_advection_exact.exe 
