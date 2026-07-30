@@ -51,7 +51,7 @@ public:
         if (x < 0){return at(points + x);}
         else if (x >= points){return at(x - points);}
         return values[x];
-    }
+    } 
 
     void print() const {
         for (int i = 0; i < points; i++){

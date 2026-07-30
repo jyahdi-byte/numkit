@@ -10,8 +10,8 @@ double compute_dt(double cn, double dx, double c){
     assert(cn <= 1);
     return cn * dx / c;
 }
-
-double compute_cn(double dt, double dx, double c){
+ 
+double compute_cn(double dt, double dx, double c){ 
     return c * dt / dx;
 }
 

@@ -4,7 +4,7 @@
 #include <vector>
 #include <cassert>
 #include "grid1d.hpp"
-
+ 
 class SpaceTimeLog {
 private:
     int rows;
