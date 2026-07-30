@@ -1,4 +1,7 @@
 #include <iostream>
+#include <cassert>
+#include <cmath>
+
 #include "grid.hpp"
 #include "jacobi.hpp"
 #include "gauss_seidel.hpp"
@@ -23,4 +26,9 @@ int main() {
     std::cout << "(5,5)  Jacobi: " << g1.at(5,5)
               << "   GS: "        << g2.at(5,5)
               << "   SOR: "       << g3.at(5,5) << "\n";
+
+    assert(std::abs(g1.at(5,5) - g2.at(5,5)) < 1e-9);
+    assert(std::abs(g2.at(5,5) - g3.at(5,5)) < 1e-9);
+
+    std::cout << "PASS\n";
 }
