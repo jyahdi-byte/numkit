@@ -15,9 +15,9 @@ int main() {
     Grid g2 = g1;
     Grid g3 = g1;
 
-    int jac = jacobi_solve(g1, 1e-6, 10000);
-    int gs  = gauss_seidel_solve(g2, 1e-6, 10000);
-    int sor = sor_solve(g3, 1e-6, 10000, 1.5);
+    int jac = jacobi_solve(g1, 1e-10, 10000);
+    int gs  = gauss_seidel_solve(g2, 1e-10, 10000);
+    int sor = sor_solve(g3, 1e-10, 10000, 1.5);
 
     std::cout << "Jacobi sweeps:       " << jac << "\n";
     std::cout << "Gauss-Seidel sweeps: " << gs  << "\n";
