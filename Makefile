@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe
+all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe demo_r_violation.exe test_diffusion_exact.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -69,3 +69,9 @@ diffusion_study.exe: include/grid1d.hpp include/advection.hpp include/stats.hpp 
 
 test_diffusion.exe: include/grid1d.hpp include/diffusion.hpp include/space_time_log.hpp include/ppm.hpp tests/test_diffusion.cpp
 	g++ -std=c++20 -Wall -O2 -I include tests/test_diffusion.cpp -o test_diffusion.exe
+
+demo_r_violation.exe: include/grid1d.hpp include/diffusion.hpp include/space_time_log.hpp tests/test_diffusion.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/test_diffusion.cpp -o test_diffusion.exe
+
+test_diffusion_exact.exe: include/grid1d.hpp include/diffusion.hpp include/space_time_log.hpp include/ppm.hpp tests/test_diffusion_exact.cpp
+	g++ -std=c++20 -Wall -O2 -I include tests/test_diffusion_exact.cpp -o test_diffusion_exact.exe

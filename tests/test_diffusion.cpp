@@ -7,7 +7,7 @@
 #include "diffusion.hpp"
 #include "ppm.hpp"
  
-int main(){ 
+int main(){  
     Grid1D u(50, 0.02);
     for (int i = 0; i < u.getPoints(); i++){u.at(i) = 0;}
     for (int i = 5; i < 9; i ++){u.at(i) = 1;}

@@ -18,6 +18,8 @@ jobs:
           ./test_advection_exact.exe
           ./test_grid.exe
           ./test_jacobi.exe
+          ./test_diffusion.exe
+          ./test_diffusion_exact.exe
 
   cuda-compile-check:
     runs-on: ubuntu-latest

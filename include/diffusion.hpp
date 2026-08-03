@@ -14,8 +14,8 @@ double compute_r(double alpha, double dt, double dx){
 
 int diffusion_solve(Grid1D& u, int num_steps, double r, SpaceTimeLog& log){
     if (r < 0 || r > 0.5){
-        if (r < 0){std::cout << "r = "<< r << ", below minimum of 0\n";}
-        else{std::cout << "r = " << r << ", exceeds maximum of 0.5\n";}
+        if (r < 0){std::cout << "r = "<< r << ", below minimum of 0" << std::endl;}
+        else{std::cout << "r = " << r << ", exceeds maximum of 0.5" << std::endl;}
         assert(false);
     }
     Grid1D new_u(u.getPoints(), u.getDx());

@@ -17,7 +17,7 @@ double compute_cn(double dt, double dx, double c){
 
 int advection_solve(Grid1D& u, int num_steps, double c, double cn, SpaceTimeLog& log){
     if (cn > 1){
-        std::cout << "cn = " << cn << ", exceeds limit of 1";
+        std::cout << "cn = " << cn << ", exceeds limit of 1" << std::endl;
         assert(false);
     }
     Grid1D new_u(u.getPoints(), u.getDx());
