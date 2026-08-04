@@ -3,10 +3,11 @@
 [![build](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
 
 A numerical PDE library built from scratch in C++ and CUDA, no
-external dependencies. Two solver families are implemented so far —
-steady-state (elliptic) and time-marching (hyperbolic) — each one
-derived from the underlying math, implemented, and checked against an
-independent exact answer rather than just run and eyeballed.
+external dependencies. All three classical PDE families are
+implemented — steady-state (elliptic), spreading (parabolic), and
+translating (hyperbolic) — each one derived from the underlying math,
+implemented, and checked against an independent exact answer rather
+than just run and eyeballed.
 
 ## Highlights
 
@@ -21,10 +22,17 @@ independent exact answer rather than just run and eyeballed.
 * A second PDE family, hyperbolic advection, built the same way as
   the first: derived from first principles, implemented, validated
   against an exact solution, and wired into CI — not just "it runs."
+* A third PDE family, parabolic diffusion, with its stability limit
+  derived from a von Neumann (Fourier-mode) analysis rather than
+  assumed, and a measured convergence order (ratios of 4.01, 4.00,
+  4.00 against a theoretical 4.0) — the same rigor as the elliptic
+  study, now on a time-marching scheme.
 * Every core numerical claim has a real assertion behind it, not a
   printed number someone has to eyeball: conservation checked to
-  `1e-9`, the advection solver checked against its exact solution to
-  `1e-9`, the CUDA kernels checked against the CPU solver to `1e-9`.
+  `1e-9` on both time-marching solvers, the advection solver checked
+  against its exact solution to `1e-9`, the diffusion solver checked
+  against its exact solution to `2e-4`, the CUDA kernels checked
+  against the CPU solver to `1e-9`.
 
 ## Steady-state solvers (elliptic)
 
@@ -130,6 +138,50 @@ run (Courant number 0.9) stays close to the exact shifted solution.*
   multiplicatively over repeated timesteps. Study:
   [docs/diffusion_study.md](docs/diffusion_study.md).
 
+## Time-marching solvers (parabolic): 1D diffusion
+
+Advection translates a shape without changing it. Diffusion does the
+opposite — nothing moves sideways, a sharp pulse just spreads out and
+flattens until it's uniform. Same explicit time-marching style as
+advection (`Grid1D`, periodic boundaries, no new infrastructure), but
+the stability limit comes from a different tool: a von Neumann
+(Fourier-mode) analysis rather than a domain-of-dependence argument,
+because the failure mode is a point overshooting its own neighbors,
+not information arriving from outside the numerical domain.
+
+**What it does**
+
+* **FTCS solver** (`diffusion.hpp`) — forward-difference in time,
+  central-difference in space, using both neighbors (`i-1` and
+  `i+1`), unlike advection's one-sided upwind stencil.
+* **`r` as a first-class input** — same pattern as advection's Courant
+  number: `r = αΔt/Δx²` is the parameter, `Δt` is derived from it
+  (`compute_r`), and a violation reports the actual offending value.
+  The deliberate `r > 1/2` demo lives in its own file
+  (`demo_r_violation.cpp`), same reasoning as `demo_cfl_violation.cpp`.
+* **Conservation by construction** — summed over the whole periodic
+  grid, every correction term cancels exactly, so total heat/mass is
+  unchanged by a step. Checked to `1e-9` in `test_diffusion.cpp`.
+* **Exact validation** — a Gaussian initial condition stays Gaussian,
+  with `σ(t)² = σ₀² + 2αt` (the heat-kernel result) and amplitude
+  scaling as `1/σ(t)` to keep the area under the curve fixed. Checked
+  pointwise against the closed-form solution.
+
+**Results**
+
+* Exact-solution test: unlike advection at Courant 1, FTCS diffusion
+  always carries some discretization error at finite `Δx`, so the
+  tolerance (`2e-4`) is set from the scheme's actual measured error at
+  this resolution rather than copied from advection's `1e-9`.
+* Convergence study: sweeping `Δx` with `r` held fixed (so `Δt` scales
+  automatically with `Δx²`) gives error ratios of 4.01, 4.00, and 4.00
+  against the theoretical 4.0 for the first three refinements — clean
+  second-order convergence. The final ratio drops to 2.55 once
+  floating-point roundoff, accumulated over ~128,000 steps at the
+  finest resolution, becomes large enough to compete with the
+  (very small) discretization error. Study:
+  [docs/diffusion_convergence.md](docs/diffusion_convergence.md).
+
 ## GPU port
 
 A CUDA port of the Jacobi solver lives in `cuda/`, built and tested
@@ -151,19 +203,21 @@ GPU — developed and run on Colab's T4 instances.
 
 * **CI on every push** — GitHub Actions builds every CPU target and
   runs the tests that have real assertions behind them
-  (`test_advection.exe`, `test_advection_exact.exe`, `test_mt.exe`,
-  `test_omega_auto.exe`). The CUDA build is compile-checked only,
-  since GitHub's runners have no GPU; actual CUDA test execution
-  stays a local Colab run before trusting a commit.
+  (`test_solvers.exe`, `test_grid.exe`, `test_jacobi.exe`,
+  `test_mt.exe`, `test_omega_auto.exe`, `test_advection.exe`,
+  `test_advection_exact.exe`, `test_diffusion.exe`,
+  `test_diffusion_exact.exe`, `diffusion_convergence.exe`). The CUDA
+  build is compile-checked only, since GitHub's runners have no GPU;
+  actual CUDA test execution stays a local Colab run before trusting
+  a commit.
 * **Assertions over print statements** — a printed number can say
   anything and still exit cleanly; only a failing `assert()` actually
   turns CI red. Every claim above that's marked as tested is backed
-  by one.
-* **Known gap, stated plainly** — `test_solvers.exe`, `test_grid.cpp`,
-  and `test_jacobi.cpp` still print values instead of asserting
-  against expected results. `test_advection.cpp` already proves the
-  pattern works cleanly; it just hasn't been retrofitted onto the
-  older heat solver tests yet.
+  by one, including the original heat-solver tests
+  (`test_solvers.cpp`, `test_grid.cpp`, `test_jacobi.cpp`), which
+  assert cross-solver agreement, grid indexing, and monotonic
+  temperature falloff from a heated edge rather than just printing
+  values.
 
 ## Building
 
@@ -172,8 +226,9 @@ Requires g++ and make. From the repo root:
     make
 
 builds every CPU target. Run `./heat.exe` to solve the steady-state
-demo problem, or `./test_advection_exact.exe` to run the advection
-solver against its exact solution.
+demo problem, `./test_advection_exact.exe` to run the advection solver
+against its exact solution, or `./test_diffusion_exact.exe` for the
+same check on the diffusion solver.
 
 The CUDA targets need `nvcc` and an NVIDIA GPU, which this repo
 doesn't assume you have locally — run these on Colab unless you
@@ -187,11 +242,12 @@ actually have one:
 
 ## Roadmap
 
-* [ ] Real test assertions retrofitted onto the heat solver's test
-      files (`test_solvers.cpp`, `test_grid.cpp`, `test_jacobi.cpp`)
-* [ ] Wave equation — leapfrog time-stepping, energy conservation as
-      the validation method instead of shape-matching, reusing
-      `Grid1D` and the space-time visualization built for advection
+* [ ] Black-Scholes as a heat equation — a change of variables
+      (log-price, time-to-maturity, a discounting substitution) turns
+      the option-pricing PDE into exactly the constant-coefficient
+      heat equation solved above, reusing the FTCS solver unchanged
+      with a real (non-periodic) boundary condition for the first
+      time, validated against the closed-form Black-Scholes price.
 
 ## License
 
