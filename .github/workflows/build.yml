@@ -21,6 +21,7 @@ jobs:
           ./test_diffusion.exe
           ./test_diffusion_exact.exe
           ./diffusion_convergence.exe
+          ./test_black_scholes_exact.exe
 
   cuda-compile-check:
     runs-on: ubuntu-latest
