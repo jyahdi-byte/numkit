@@ -38,7 +38,7 @@ public:
             at(i) = other.at(i);
         }
     }
-
+ 
     double& at(int x){
         // periodic wraparound: index -1 maps to points-1, index points maps to 0
         if (x < 0){return at(points + x);}

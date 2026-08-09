@@ -1,253 +1,553 @@
-# numkit
+# NumKit
 
-[![build](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
+A C++ numerical computing library focused on **finite-difference PDE solvers, numerical verification, convergence analysis, CPU parallelism, and CUDA acceleration**.
 
-A numerical PDE library built from scratch in C++ and CUDA, no
-external dependencies. All three classical PDE families are
-implemented — steady-state (elliptic), spreading (parabolic), and
-translating (hyperbolic) — each one derived from the underlying math,
-implemented, and checked against an independent exact answer rather
-than just run and eyeballed.
+NumKit explores the full numerical-computing workflow:
+
+```text
+Mathematical Model
+        ↓
+Finite-Difference Discretization
+        ↓
+Numerical Solver
+        ↓
+Analytical / Physical Validation
+        ↓
+Convergence & Stability Analysis
+        ↓
+CPU Parallelization
+        ↓
+CUDA Acceleration
+        ↓
+Performance Analysis
+```
+
+The goal is not simply to produce a numerical answer, but to understand **why the answer should be trusted and how efficiently it can be computed**.
+
+---
 
 ## Highlights
 
-* Verified second-order convergence against manufactured analytical
-  solutions (measured ratios 4.17 / 4.11 against the theoretical 4.0
-  for a 2x grid refinement).
-* SOR at its measured optimal relaxation factor is 8x cheaper than
-  Jacobi; the closed-form auto-tuned version is 12x cheaper than a
-  fixed guess once the grid gets large.
-* A CUDA port with a shared-memory tiled kernel that beats the naive
-  version, benchmarked across five block sizes on a Tesla T4.
-* A second PDE family, hyperbolic advection, built the same way as
-  the first: derived from first principles, implemented, validated
-  against an exact solution, and wired into CI — not just "it runs."
-* A third PDE family, parabolic diffusion, with its stability limit
-  derived from a von Neumann (Fourier-mode) analysis rather than
-  assumed, and a measured convergence order (ratios of 4.01, 4.00,
-  4.00 against a theoretical 4.0) — the same rigor as the elliptic
-  study, now on a time-marching scheme.
-* Every core numerical claim has a real assertion behind it, not a
-  printed number someone has to eyeball: conservation checked to
-  `1e-9` on both time-marching solvers, the advection solver checked
-  against its exact solution to `1e-9`, the diffusion solver checked
-  against its exact solution to `2e-4`, the CUDA kernels checked
-  against the CPU solver to `1e-9`.
+- Implemented finite-difference solvers for **elliptic, parabolic, and hyperbolic PDEs**
+- Implemented **Jacobi, Gauss-Seidel, and SOR** iterative methods
+- Validated numerical solutions against analytical solutions
+- Performed grid-refinement and convergence studies
+- Investigated CFL and diffusion stability limits
+- Built conservation-based numerical tests
+- Parallelized Jacobi iteration with C++ threads
+- Developed a persistent worker model using `std::barrier`
+- Implemented CUDA Jacobi kernels
+- Optimized CUDA Jacobi with shared-memory tiling
+- Benchmarked CPU, naive CUDA, and tiled CUDA implementations
+- Built automated numerical tests and GitHub Actions CI
+- Investigated numerical error, memory bandwidth, synchronization overhead, and GPU kernel-launch overhead
 
-## Steady-state solvers (elliptic)
+---
 
-**The problem it solves:** predict the steady-state temperature at
-every point of a heated plate. Mathematically this means solving
-Laplace's equation. numkit discretizes it with finite differences and
-solves the resulting sparse linear system (~10⁴–10⁵ unknowns) with
-iterative methods, the same pipeline at the core of CFD and finite
-element software.
+# Numerical Methods
 
-![Steady-state heat solution](docs/heatmap.png)
+## Elliptic PDEs
 
-*Steady-state temperature field on a 300×200 plate with the top edge
-held at 100° and the remaining edges at 0°, solved with SOR and
-rendered to PPM by the library.*
+NumKit solves steady-state elliptic problems such as Laplace's equation:
 
-**What it does**
+\[
+\nabla^2 T = 0
+\]
 
-* **Discretization** — samples the continuous PDE on a uniform grid
-  and replaces second derivatives with central finite differences,
-  reducing the problem to a sparse linear system with one equation
-  per interior point.
-* **Iterative solvers** — Jacobi, Gauss-Seidel, and SOR, implemented
-  from scratch and validated against each other and against exact
-  solutions. SOR also has a closed-form auto-tuned variant that
-  computes its relaxation factor from the grid size.
-* **Parallelism** — a multithreaded CPU Jacobi solver with a measured,
-  diagnosed speedup study, upgraded to a persistent worker pool
-  (`std::barrier`) that creates threads once instead of every sweep,
-  plus a CUDA port (`cuda/`): naive and shared-memory-tiled kernels,
-  both validated and benchmarked.
-* **Visualization** — renders solved fields to PPM images with a
-  blue-to-red color map.
+Implemented iterative methods:
 
-**Results**
+- Jacobi
+- Gauss-Seidel
+- Successive Over-Relaxation (SOR)
 
-* On a 10×10 test problem, Jacobi / Gauss-Seidel / SOR converge in
-  237 / 124 / 29 sweeps. Study: [docs/omega_study.md](docs/omega_study.md).
-* Auto-tuned SOR converges in 298 sweeps versus 3,849 for a fixed
-  ω = 1.5 on a 100×100 grid — the fixed guess tuned for a small grid
-  stops being a good guess as the grid grows.
-* Multithreaded Jacobi reaches 1.63x speedup at 2 threads; memory
-  bandwidth is the ceiling. Study: [docs/threading_study.md](docs/threading_study.md).
-* Persistent worker pool rewrite (`jacobi_mt.hpp`) re-verified
-  against the single-threaded solver: identical iteration count, zero
-  difference in the converged grid.
-* Naive CUDA Jacobi kernel: 93.7 ms mean across 10 trials
-  (σ ≈ 1.1 ms) for 10,000 sweeps on a 100×100 grid, Tesla T4.
-* Shared-memory tiled kernel, swept across block sizes 8×8 through
-  32×32: 8×8 wins at 85.4 ms mean (σ ≈ 0.24 ms), beating the naive
-  kernel. Larger blocks were consistently slower — fewer blocks
-  resident per SM means less work available to hide memory-fetch
-  stalls, which matters more for a memory-bound kernel like Jacobi
-  than a compute-bound one.
+### Analytical Validation
 
-Full validation methodology: [docs/validation.md](docs/validation.md).
+The solver is validated against the manufactured solution:
 
-## Time-marching solvers (hyperbolic): 1D advection
+\[
+T(x,y)=\sin(\pi x)\sinh(\pi y)
+\]
 
-The heat solver settles to a steady state. Advection doesn't — a
-shape gets carried along by a flow and should translate without
-changing, forever. That calls for a different approach: explicit
-time-stepping instead of relaxation, an upwind stencil instead of a
-centered one, and a CFL stability limit instead of a convergence
-tolerance.
+Grid refinement produces approximately second-order convergence:
 
-![Numerical diffusion at Courant 0.9](docs/diffusion_cn_0.9.png)
+| Grid Refinement | Error Ratio |
+|---|---:|
+| 25 → 50 | 4.17 |
+| 50 → 100 | 4.11 |
 
-*Space-time diagram: each row is a timestep, each column a grid
-point. The diagonal streak is the pulse translating correctly; this
-run (Courant number 0.9) stays close to the exact shifted solution.*
+For a second-order method, halving the grid spacing should reduce the error by approximately:
 
-**What it does**
+\[
+2^2=4
+\]
 
-* **`Grid1D`** — a periodic 1D grid with wraparound indexing built
-  into `at()`, so the solver never special-cases the domain's edges.
-* **Upwind solver** (`advection.hpp`) — derived from the advection
-  equation by hand, not copied from a reference: forward-difference
-  in time, backward-difference in space, biased toward the direction
-  information actually travels from.
-* **CFL as a first-class input** — the Courant number is a direct
-  parameter, and `Δt` is derived from it (`compute_dt`/`compute_cn`),
-  so a caller can never accidentally pick an unstable step size. A
-  violation reports the actual offending value instead of crashing
-  silently, and the deliberate CFL > 1 demo lives in its own file
-  (`demo_cfl_violation.cpp`) so it can fail on purpose without
-  threatening the real test suite.
-* **Space-time visualization** — one PPM row per timestep;
-  `write_ppm` is templated to take either a 2D `Grid` or a
-  `SpaceTimeLog`, so the heat solver's renderer works here with no
-  duplicated code.
+The measured ratios closely match the theoretical prediction.
 
-**Results**
+---
 
-* Exact-solution test: at Courant number 1 the scheme is provably
-  exact (a pure copy, no averaging), so the solver's output is
-  checked point-by-point against the analytically shifted initial
-  condition to `1e-9`, wired into CI on every push.
-* Numerical diffusion study: RMSE against the exact solution drops
-  from 0.362 at Courant 0.1 to 0.221 at Courant 0.9, and the drop
-  isn't linear — it's flat through most of the range and falls
-  sharply near Courant 1, because a small per-step blur compounds
-  multiplicatively over repeated timesteps. Study:
-  [docs/diffusion_study.md](docs/diffusion_study.md).
+## SOR Parameter Study
 
-## Time-marching solvers (parabolic): 1D diffusion
+SOR introduces the relaxation parameter:
 
-Advection translates a shape without changing it. Diffusion does the
-opposite — nothing moves sideways, a sharp pulse just spreads out and
-flattens until it's uniform. Same explicit time-marching style as
-advection (`Grid1D`, periodic boundaries, no new infrastructure), but
-the stability limit comes from a different tool: a von Neumann
-(Fourier-mode) analysis rather than a domain-of-dependence argument,
-because the failure mode is a point overshooting its own neighbors,
-not information arriving from outside the numerical domain.
+\[
+\omega
+\]
 
-**What it does**
+NumKit sweeps the relaxation parameter experimentally and measures the iterations required for convergence.
 
-* **FTCS solver** (`diffusion.hpp`) — forward-difference in time,
-  central-difference in space, using both neighbors (`i-1` and
-  `i+1`), unlike advection's one-sided upwind stencil.
-* **`r` as a first-class input** — same pattern as advection's Courant
-  number: `r = αΔt/Δx²` is the parameter, `Δt` is derived from it
-  (`compute_r`), and a violation reports the actual offending value.
-  The deliberate `r > 1/2` demo lives in its own file
-  (`demo_r_violation.cpp`), same reasoning as `demo_cfl_violation.cpp`.
-* **Conservation by construction** — summed over the whole periodic
-  grid, every correction term cancels exactly, so total heat/mass is
-  unchanged by a step. Checked to `1e-9` in `test_diffusion.cpp`.
-* **Exact validation** — a Gaussian initial condition stays Gaussian,
-  with `σ(t)² = σ₀² + 2αt` (the heat-kernel result) and amplitude
-  scaling as `1/σ(t)` to keep the area under the curve fixed. Checked
-  pointwise against the closed-form solution.
+The measured optimum occurs around:
 
-**Results**
+\[
+\omega \approx 1.50
+\]
 
-* Exact-solution test: unlike advection at Courant 1, FTCS diffusion
-  always carries some discretization error at finite `Δx`, so the
-  tolerance (`2e-4`) is set from the scheme's actual measured error at
-  this resolution rather than copied from advection's `1e-9`.
-* Convergence study: sweeping `Δx` with `r` held fixed (so `Δt` scales
-  automatically with `Δx²`) gives error ratios of 4.01, 4.00, and 4.00
-  against the theoretical 4.0 for the first three refinements — clean
-  second-order convergence. The final ratio drops to 2.55 once
-  floating-point roundoff, accumulated over ~128,000 steps at the
-  finest resolution, becomes large enough to compete with the
-  (very small) discretization error. Study:
-  [docs/diffusion_convergence.md](docs/diffusion_convergence.md).
+This is compared against the theoretical estimate:
 
-## GPU port
+\[
+\omega_{\mathrm{opt}}
+\approx
+\frac{2}{1+\sin(\pi h)}
+\]
 
-A CUDA port of the Jacobi solver lives in `cuda/`, built and tested
-separately from the CPU code since it needs `nvcc` and an NVIDIA
-GPU — developed and run on Colab's T4 instances.
+This provides a direct comparison between numerical-analysis theory and measured computational behavior.
 
-* [x] `Grid` moved to device memory and back, verified with real
-      assertions (`cuda/grid_transfer_test.cu`).
-* [x] Naive Jacobi kernel, validated against `jacobi_solve` to
-      `1e-9` (`cuda/jacobi_validate.cu`).
-* [x] Benchmarking methodology — `-O3 -arch=sm_75`, warm-up runs
-      discarded, 10 timed trials, mean and standard deviation
-      reported (`cuda/bench_gpu.cu`, `include/stats.hpp`).
-* [x] Shared-memory tiling with halo handling, validated against
-      the CPU solver (`include/jacobi_tiled_kernel.cuh`).
-* [x] Block-size sweep, 8×8 through 32×32 (`cuda/bench_tiled_sweep.cu`).
+---
 
-## Engineering practices
+# Hyperbolic PDEs
 
-* **CI on every push** — GitHub Actions builds every CPU target and
-  runs the tests that have real assertions behind them
-  (`test_solvers.exe`, `test_grid.exe`, `test_jacobi.exe`,
-  `test_mt.exe`, `test_omega_auto.exe`, `test_advection.exe`,
-  `test_advection_exact.exe`, `test_diffusion.exe`,
-  `test_diffusion_exact.exe`, `diffusion_convergence.exe`). The CUDA
-  build is compile-checked only, since GitHub's runners have no GPU;
-  actual CUDA test execution stays a local Colab run before trusting
-  a commit.
-* **Assertions over print statements** — a printed number can say
-  anything and still exit cleanly; only a failing `assert()` actually
-  turns CI red. Every claim above that's marked as tested is backed
-  by one, including the original heat-solver tests
-  (`test_solvers.cpp`, `test_grid.cpp`, `test_jacobi.cpp`), which
-  assert cross-solver agreement, grid indexing, and monotonic
-  temperature falloff from a heated edge rather than just printing
-  values.
+NumKit implements an upwind finite-difference solver for the 1D advection equation:
 
-## Building
+\[
+u_t+cu_x=0
+\]
 
-Requires g++ and make. From the repo root:
+Features include:
 
-    make
+- Periodic boundary conditions
+- Courant-number calculation
+- CFL stability analysis
+- Exact-solution comparison
+- Numerical-diffusion experiments
 
-builds every CPU target. Run `./heat.exe` to solve the steady-state
-demo problem, `./test_advection_exact.exe` to run the advection solver
-against its exact solution, or `./test_diffusion_exact.exe` for the
-same check on the diffusion solver.
+For the exact solution,
 
-The CUDA targets need `nvcc` and an NVIDIA GPU, which this repo
-doesn't assume you have locally — run these on Colab unless you
-actually have one:
+\[
+u(x,t)=u_0(x-ct)
+\]
 
-    make cuda-test              # grid transfer round-trip test
-    make jacobi-validate        # naive kernel vs. CPU jacobi_solve
-    make bench-gpu              # naive kernel: warm-up + 10 trials, mean/stddev
-    make jacobi-tiled-validate  # tiled kernel vs. CPU jacobi_solve
-    make bench-tiled-sweep      # block-size sweep: 8x8 through 32x32
+the numerical solution can be compared directly against the translated initial condition.
 
-## Roadmap
+The repository also includes deliberate CFL-violation experiments to demonstrate instability when the stability condition is exceeded.
 
-* [ ] Black-Scholes as a heat equation — a change of variables
-      (log-price, time-to-maturity, a discounting substitution) turns
-      the option-pricing PDE into exactly the constant-coefficient
-      heat equation solved above, reusing the FTCS solver unchanged
-      with a real (non-periodic) boundary condition for the first
-      time, validated against the closed-form Black-Scholes price.
+---
+
+# Parabolic PDEs
+
+NumKit implements Forward-Time Centered-Space (FTCS) for the 1D diffusion equation:
+
+\[
+u_t=\alpha u_{xx}
+\]
+
+with stability parameter:
+
+\[
+r=\frac{\alpha\Delta t}{\Delta x^2}
+\]
+
+and explicit stability condition:
+
+\[
+r\leq\frac12
+\]
+
+Features include:
+
+- FTCS diffusion solver
+- Gaussian analytical solution
+- Conservation testing
+- Stability-violation experiments
+- Grid-refinement studies
+- Error analysis
+
+## Diffusion Convergence Study
+
+The convergence experiments hold
+
+\[
+r=\frac{\alpha\Delta t}{\Delta x^2}
+\]
+
+constant while refining the spatial grid.
+
+Therefore,
+
+\[
+\Delta t\propto\Delta x^2
+\]
+
+Measured refinement ratios include:
+
+```text
+4.01
+4.00
+4.00
+```
+
+matching the expected second-order behavior.
+
+At the finest resolution, the measured ratio begins to deviate as the number of time steps becomes very large, providing an example of accumulated floating-point error becoming more significant relative to discretization error.
+
+---
+
+# CPU Parallelization
+
+Jacobi iteration is naturally parallel because each grid point in a sweep depends only on values from the previous iteration.
+
+NumKit includes a multithreaded implementation using C++ threads.
+
+Example benchmark:
+
+| Threads | Runtime | Speedup |
+|---:|---:|---:|
+| 1 | 152 s | 1.00× |
+| 2 | 93 s | 1.63× |
+| 4 | 110 s | 1.38× |
+| 8 | 107.8 s | 1.41× |
+
+The results demonstrate that increasing thread count does not automatically produce proportional speedup.
+
+The project investigates:
+
+- Memory-bandwidth limitations
+- Thread-management overhead
+- Physical vs. logical CPU cores
+- Synchronization costs
+
+The implementation was subsequently redesigned around a persistent worker model using `std::barrier` to reduce repeated thread-creation overhead.
+
+The important result was not simply the speedup number, but using the benchmark to identify a performance bottleneck and guide an implementation change.
+
+---
+
+# CUDA Acceleration
+
+The GPU implementation progressed through several stages:
+
+```text
+CPU Jacobi
+    ↓
+Naive CUDA Kernel
+    ↓
+Correctness Validation
+    ↓
+Shared-Memory Tiling
+    ↓
+Block-Size Experiments
+    ↓
+Performance Benchmarking
+```
+
+## Shared-Memory Tiling
+
+The tiled CUDA implementation loads local grid regions and halo values into shared memory.
+
+This reduces repeated global-memory accesses when neighboring values are reused by multiple threads.
+
+The GPU implementation is validated against the CPU solver before performance comparisons.
+
+## CPU vs. CUDA
+
+Example benchmark:
+
+| Implementation | Runtime |
+|---|---:|
+| CPU | 113.09 ms |
+| CUDA — Naive | 93.69 ms |
+| CUDA — Shared Memory | **85.48 ms** |
+
+The tiled CUDA implementation achieves approximately:
+
+\[
+1.32\times
+\]
+
+the CPU performance for this workload.
+
+The modest GPU speedup is itself informative. Jacobi iteration is memory-dependent, the benchmark uses a relatively small problem size, and repeated kernel launches introduce overhead.
+
+The project therefore treats GPU benchmarking as a performance investigation rather than simply trying to maximize the reported speedup.
+
+---
+
+# CUDA Debugging and Validation
+
+During development, the tiled CUDA implementation contained a halo-loading bug for ragged block sizes.
+
+The original implementation happened to pass a correctness check for one tested configuration.
+
+Additional testing exposed the issue, after which the kernel was corrected and revalidated.
+
+This reinforced a central development principle:
+
+```text
+Implementation
+      ↓
+Validation
+      ↓
+Unexpected Behavior
+      ↓
+Bug Identification
+      ↓
+Correction
+      ↓
+Revalidation
+```
+
+Numerical software should not be trusted simply because its output looks plausible.
+
+---
+
+# Verification
+
+NumKit separates **unit tests, numerical experiments, and performance benchmarks**.
+
+### Unit Tests
+
+Test individual components and expected behavior:
+
+- Grid indexing
+- Solver outputs
+- Exact solutions
+- Conservation
+- Boundary behavior
+
+### Numerical Experiments
+
+Investigate mathematical behavior:
+
+- Convergence studies
+- Stability-limit experiments
+- SOR parameter sweeps
+- Numerical diffusion
+- CPU scaling
+- CUDA block-size comparisons
+
+### Benchmarks
+
+Measure computational performance:
+
+- Single-thread vs. multithreaded CPU execution
+- Naive vs. tiled CUDA
+- Different CUDA block sizes
+- Synchronization and memory effects
+
+This separation makes it possible to distinguish:
+
+**"Is the algorithm correct?"**
+
+from
+
+**"How does the algorithm behave numerically?"**
+
+and
+
+**"How efficiently is it implemented?"**
+
+---
+
+# Testing and CI
+
+NumKit uses C++ assertions and automated tests to verify numerical behavior.
+
+Example:
+
+```cpp
+assert(std::abs(u.at(i) - 1) < 1e-9);
+```
+
+Conservation checks include:
+
+```cpp
+assert(std::abs(sum_after - sum_before) < 1e-9);
+```
+
+GitHub Actions automatically builds and runs tests on repository changes.
+
+The objective is to make numerical regressions fail automatically rather than relying only on manually inspected output.
+
+---
+
+# Repository Structure
+
+```text
+numkit/
+├── include/
+│   ├── grid.hpp
+│   ├── jacobi.hpp
+│   ├── gauss_seidel.hpp
+│   ├── sor.hpp
+│   ├── advection.hpp
+│   ├── diffusion.hpp
+│   └── ...
+│
+├── cuda/
+│   ├── jacobi.cu
+│   ├── jacobi_tiled.cu
+│   └── ...
+│
+├── tests/
+│   ├── test_grid.cpp
+│   ├── test_jacobi.cpp
+│   ├── test_diffusion.cpp
+│   ├── test_advection.cpp
+│   ├── test_convergence.cpp
+│   └── ...
+│
+├── experiments/
+│   ├── convergence/
+│   ├── stability/
+│   ├── cpu/
+│   └── cuda/
+│
+├── docs/
+│   ├── convergence.md
+│   ├── diffusion.md
+│   ├── advection.md
+│   └── ...
+│
+└── .github/
+    └── workflows/
+```
+
+---
+
+# Technical Stack
+
+### Languages
+
+- C++
+- CUDA
+- Python for supporting analysis and visualization where applicable
+
+### Numerical Computing
+
+- Finite-difference methods
+- Iterative linear solvers
+- PDE discretization
+- Stability analysis
+- Convergence analysis
+- Numerical error analysis
+
+### Parallel Computing
+
+- C++ threads
+- `std::barrier`
+- CUDA
+- CUDA shared memory
+- GPU kernel optimization
+
+### Development
+
+- Git
+- GitHub
+- GitHub Actions
+- Automated testing
+- Performance benchmarking
+
+---
+
+# What This Project Demonstrates
+
+NumKit is an exploration of the relationship between **mathematics, numerical algorithms, and computer architecture**.
+
+The project demonstrates the ability to:
+
+- Translate mathematical equations into computational algorithms
+- Validate numerical implementations against independent analytical results
+- Measure convergence and compare it against theoretical predictions
+- Identify stability constraints and deliberately test their failure modes
+- Parallelize numerical algorithms on CPUs
+- Develop and optimize GPU kernels
+- Use benchmarking to investigate performance bottlenecks
+- Debug numerical and parallel implementations
+- Build automated tests around scientific computations
+
+The central workflow is:
+
+```text
+Mathematical Theory
+        ↓
+Implementation
+        ↓
+Verification
+        ↓
+Experiment
+        ↓
+Benchmark
+        ↓
+Optimization
+        ↓
+Revalidation
+```
+
+---
+
+# Future Development
+
+The long-term goal is to evolve NumKit from a collection of numerical experiments into a more reusable numerical-computing framework.
+
+Planned directions include:
+
+- More systematic boundary-condition abstractions
+- Additional iterative linear solvers
+- Conjugate Gradient
+- GMRES
+- More reusable PDE/discretization abstractions
+- 2D and 3D extensions
+- More advanced CUDA implementations
+- CUDA event-based benchmarking
+- GPU profiling and occupancy analysis
+- Larger-scale performance studies
+- More comprehensive numerical regression testing
+- Black-Scholes PDE implementation and validation
+
+The focus is on making the numerical machinery increasingly **general, verifiable, and performance-aware**.
+
+---
+
+# Project Philosophy
+
+> **A numerical algorithm is not finished when it produces an answer. It is finished when the answer has been validated, its error and stability are understood, and its computational behavior has been measured.**
+
+NumKit combines:
+
+```text
+Mathematics
+     +
+Numerical Analysis
+     +
+C++ Systems Programming
+     +
+Parallel Computing
+     +
+GPU Computing
+     +
+Experimental Validation
+```
+
+into one continuously evolving project.
+
+---
+
+# Author
+
+**Jonas Yahdi**
+
+Applied Mathematics / Computational Mathematics & Computer Science  
+Santa Clara University
+
+GitHub: [jyahdi-byte](https://github.com/jyahdi-byte)
 
 ## License
 
