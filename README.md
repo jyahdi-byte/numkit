@@ -50,9 +50,7 @@ The goal is not simply to produce a numerical answer, but to understand **why th
 
 NumKit solves steady-state elliptic problems such as Laplace's equation:
 
-\[
-\nabla^2 T = 0
-\]
+∇²T = 0
 
 Implemented iterative methods:
 
@@ -64,9 +62,7 @@ Implemented iterative methods:
 
 The solver is validated against the manufactured solution:
 
-\[
-T(x,y)=\sin(\pi x)\sinh(\pi y)
-\]
+T(x, y) = sin(πx) sinh(πy)
 
 Grid refinement produces approximately second-order convergence:
 
@@ -77,9 +73,7 @@ Grid refinement produces approximately second-order convergence:
 
 For a second-order method, halving the grid spacing should reduce the error by approximately:
 
-\[
-2^2=4
-\]
+2² = 4
 
 The measured ratios closely match the theoretical prediction.
 
@@ -89,25 +83,17 @@ The measured ratios closely match the theoretical prediction.
 
 SOR introduces the relaxation parameter:
 
-\[
-\omega
-\]
+ω
 
 NumKit sweeps the relaxation parameter experimentally and measures the iterations required for convergence.
 
 The measured optimum occurs around:
 
-\[
-\omega \approx 1.50
-\]
+ω ≈ 1.50
 
 This is compared against the theoretical estimate:
 
-\[
-\omega_{\mathrm{opt}}
-\approx
-\frac{2}{1+\sin(\pi h)}
-\]
+ω_opt ≈ 2 / (1 + sin(πh))
 
 This provides a direct comparison between numerical-analysis theory and measured computational behavior.
 
@@ -117,9 +103,7 @@ This provides a direct comparison between numerical-analysis theory and measured
 
 NumKit implements an upwind finite-difference solver for the 1D advection equation:
 
-\[
-u_t+cu_x=0
-\]
+u_t + c u_x = 0
 
 Features include:
 
@@ -131,9 +115,7 @@ Features include:
 
 For the exact solution,
 
-\[
-u(x,t)=u_0(x-ct)
-\]
+u(x, t) = u₀(x − ct)
 
 the numerical solution can be compared directly against the translated initial condition.
 
@@ -145,21 +127,15 @@ The repository also includes deliberate CFL-violation experiments to demonstrate
 
 NumKit implements Forward-Time Centered-Space (FTCS) for the 1D diffusion equation:
 
-\[
-u_t=\alpha u_{xx}
-\]
+u_t = α u_xx
 
 with stability parameter:
 
-\[
-r=\frac{\alpha\Delta t}{\Delta x^2}
-\]
+r = α Δt / Δx²
 
 and explicit stability condition:
 
-\[
-r\leq\frac12
-\]
+r ≤ 1/2
 
 Features include:
 
@@ -174,17 +150,13 @@ Features include:
 
 The convergence experiments hold
 
-\[
-r=\frac{\alpha\Delta t}{\Delta x^2}
-\]
+r = α Δt / Δx²
 
 constant while refining the spatial grid.
 
 Therefore,
 
-\[
-\Delta t\propto\Delta x^2
-\]
+Δt ∝ Δx²
 
 Measured refinement ratios include:
 
@@ -268,9 +240,7 @@ Example benchmark:
 
 The tiled CUDA implementation achieves approximately:
 
-\[
-1.32\times
-\]
+1.32×
 
 the CPU performance for this workload.
 
