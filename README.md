@@ -518,6 +518,7 @@ Applied Mathematics / Computational Mathematics & Computer Science
 Santa Clara University
 
 GitHub: [jyahdi-byte](https://github.com/jyahdi-byte)
+LinkedIn: [Jonas Yahdi](https://www.linkedin.com/in/jonas-yahdi-b00a1a226/)
 
 ## License
 
