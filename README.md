@@ -354,40 +354,68 @@ The objective is to make numerical regressions fail automatically rather than re
 numkit/
 ├── include/
 │   ├── grid.hpp
+│   ├── grid1d.hpp
 │   ├── jacobi.hpp
+│   ├── jacobi_mt.hpp
+│   ├── n_jacobi.hpp
 │   ├── gauss_seidel.hpp
 │   ├── sor.hpp
 │   ├── advection.hpp
 │   ├── diffusion.hpp
-│   └── ...
+│   ├── diffusion_exact.hpp
+│   ├── black_scholes.hpp
+│   ├── black_scholes_exact.hpp
+│   ├── jacobi_kernel.cuh
+│   ├── jacobi_tiled_kernel.cuh
+│   ├── space_time_log.hpp
+│   ├── stats.hpp
+│   └── ppm.hpp
 │
 ├── cuda/
-│   ├── jacobi.cu
-│   ├── jacobi_tiled.cu
-│   └── ...
+│   ├── jacobi_validate.cu
+│   ├── jacobi_tiled_validate.cu
+│   ├── jacobi_convergence.cu
+│   ├── bench_gpu.cu
+│   ├── bench_tiled_sweep.cu
+│   └── grid_transfer_test.cu
+│
+├── apps/
+│   └── heat/
+│       └── main.cpp
 │
 ├── tests/
 │   ├── test_grid.cpp
 │   ├── test_jacobi.cpp
+│   ├── test_solvers.cpp
+│   ├── test_mt.cpp
 │   ├── test_diffusion.cpp
+│   ├── test_diffusion_exact.cpp
 │   ├── test_advection.cpp
-│   ├── test_convergence.cpp
-│   └── ...
-│
-├── experiments/
-│   ├── convergence/
-│   ├── stability/
-│   ├── cpu/
-│   └── cuda/
+│   ├── test_advection_exact.cpp
+│   ├── test_black_scholes_exact.cpp
+│   ├── test_omega_auto.cpp
+│   ├── diffusion_convergence.cpp
+│   ├── diffusion_study.cpp
+│   ├── omega_sweep.cpp
+│   ├── demo_cfl_violation.cpp
+│   ├── demo_r_violation.cpp
+│   ├── bench_cpu.cpp
+│   ├── bench_mt.cpp
+│   └── validate.cpp
 │
 ├── docs/
-│   ├── convergence.md
-│   ├── diffusion.md
-│   ├── advection.md
-│   └── ...
+│   ├── validation.md
+│   ├── diffusion_study.md
+│   ├── diffusion_convergence.md
+│   ├── omega_study.md
+│   ├── threading_study.md
+│   ├── gpu_speedup_study.md
+│   └── heatmap.png
 │
+├── Makefile
 └── .github/
     └── workflows/
+        └── build.yml
 ```
 
 ---
@@ -480,7 +508,6 @@ Planned directions include:
 - GPU profiling and occupancy analysis
 - Larger-scale performance studies
 - More comprehensive numerical regression testing
-- Black-Scholes PDE implementation and validation
 
 The focus is on making the numerical machinery increasingly **general, verifiable, and performance-aware**.
 
