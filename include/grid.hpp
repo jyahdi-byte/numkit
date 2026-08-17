@@ -39,8 +39,6 @@ public:
     int getRows() const {return rows;}
     int getCols() const {return cols;}
 
-    double* getTempsPtr(){return temps.data();}
-
     void setType(int i, int j, CellType type){
         assert(i >= 0 && i < getRows() && j >= 0 && j < getCols());
         cellTypes[i * cols + j] = type;
@@ -58,6 +56,9 @@ public:
             }
         }
     }
+
+    double* getTempsPtr(){return temps.data();}
+    CellType* getTypesPtr(){return cellTypes.data();}
 };
 
 #endif

@@ -14,7 +14,7 @@ double max_element(const std::vector<double> nums){
     for (size_t i = 0; i < nums.size(); i++){
         if (nums[i] > max){
             max = nums[i];
-        }
+        } 
     }
     return max;
 }
@@ -24,13 +24,15 @@ void sweep_rows(const Grid& g, Grid& newg, int r_start, int r_end, double& local
     double change = 0;
     for (int i = r_start; i < r_end; i++){
             for (int j = 1; j < g.getCols() - 1; j++){
-                newg.at(i,j) = (g.at(i+1,j) + g.at(i-1,j) + g.at(i,j+1) + g.at(i,j-1))/4;
-                change = std::abs(newg.at(i,j) - g.at(i,j));
-                if (change >= localMax){
-                    localMax = change;
+                if (g.getType(i,j) == INTERIOR){
+                    newg.at(i,j) = (g.at(i+1,j) + g.at(i-1,j) + g.at(i,j+1) + g.at(i,j-1))/4;
+                    change = std::abs(newg.at(i,j) - g.at(i,j));
+                    if (change >= localMax){
+                        localMax = change;
+                    }
                 }
             }
-        }
+        } 
 }
 
 // persistent version, thread just keeps sweeping its rows until converged flag flips
