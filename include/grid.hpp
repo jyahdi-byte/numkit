@@ -24,7 +24,7 @@ public:
                 else{cellTypes.push_back(INTERIOR);}
             }
         }
-    } 
+    }
 
     double& at(int r, int c){
         assert(r < rows && r >= 0 && c < cols && c >= 0);
