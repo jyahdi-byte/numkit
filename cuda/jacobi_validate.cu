@@ -8,28 +8,30 @@
 
 int main(){
     Grid g(100,100);
-    Grid g0(100,100);
-    for (int j = 0; j < g.getCols(); j++){
-        g.at(0,j) = 100;
-        g0.at(0,j) = 100;
-    }
+    for (int j = 0; j < g.getCols(); j++){g.at(0,j) = 100;}
+    g.maskRect(40, 40, 60, 60, HOLE);
+    Grid g0 = g;;
+
 
     int rows = g.getRows();
     int cols = g.getCols();
     int sweeps = jacobi_solve(g, 1e-8, 50000);
     double* d_old;
     double* d_new;
+    CellType* d_types;
     cudaMalloc((void**)&d_old, rows * cols * sizeof(double));
     cudaMalloc((void**)&d_new, rows * cols * sizeof(double));
+    cudaMalloc((void**)&d_types, rows * cols * sizeof(CellType));
     cudaMemcpy(d_old, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_new, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_types, g0.getTypesPtr(), rows * cols * sizeof(CellType), cudaMemcpyHostToDevice);
 
 
     int interior = (rows - 2) * (cols - 2); 
     int threadsPerBlock = 256;
     int numBlocks = (interior + threadsPerBlock - 1) / threadsPerBlock;
     for (int i = 0; i < sweeps; i++){
-        jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
+        jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, d_types, rows, cols);
         cudaDeviceSynchronize();
 
         double* temp = d_old;

@@ -14,12 +14,15 @@ int main(){
     int rows = g.getRows();
     int cols = g.getCols();
     int sweeps = 10000;
-    double* d_new;
     double* d_old;
-    cudaMalloc((void**)&d_new, rows * cols * sizeof(double));
+    double* d_new;
+    CellType* d_types;
     cudaMalloc((void**)&d_old, rows * cols * sizeof(double));
+    cudaMalloc((void**)&d_new, rows * cols * sizeof(double));
+    cudaMalloc((void**)&d_types, rows * cols * sizeof(CellType));
     cudaMemcpy(d_old, g.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_new, g.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_types, g.getTypesPtr(), rows * cols * sizeof(CellType), cudaMemcpyHostToDevice);;
 
     int interior = (rows - 2) * (cols - 2);
     int threadsPerBlock = 256;
@@ -27,7 +30,7 @@ int main(){
     std::vector<double> times;
 
     for (int i = 0; i < 10; i++){
-            jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
+            jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, d_types, rows, cols);
             cudaDeviceSynchronize();
 
             double* temp = d_old;
@@ -37,11 +40,10 @@ int main(){
 
     for (int k = 0; k < 10; k++){
 
-        // AI added: timer around the real timed loop
         auto t1 = std::chrono::high_resolution_clock::now();
 
         for (int i = 0; i < sweeps; i++){
-            jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, rows, cols);
+            jacobi_kernel<<<numBlocks, threadsPerBlock>>>(d_old, d_new, d_types, rows, cols);
             cudaDeviceSynchronize();
 
             double* temp = d_old;
@@ -49,7 +51,6 @@ int main(){
             d_new = temp;
         }
 
-        // AI added: stop timer, convert to ms
         auto t2 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(t2 - t1).count();
         std::cout << "Elapsed: " << ms << " ms for " << sweeps << " sweeps\n";
