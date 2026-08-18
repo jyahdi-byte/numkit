@@ -41,6 +41,7 @@ The goal is not simply to produce a numerical answer, but to understand **why th
 - Benchmarked CPU, naive CUDA, and tiled CUDA implementations
 - Built automated numerical tests and GitHub Actions CI
 - Investigated numerical error, memory bandwidth, synchronization overhead, and GPU kernel-launch overhead
+- Implemented embedded-boundary domains with Dirichlet and Neumann (insulated) obstacles
 
 ---
 
@@ -96,6 +97,73 @@ This is compared against the theoretical estimate:
 ω_opt ≈ 2 / (1 + sin(πh))
 
 This provides a direct comparison between numerical-analysis theory and measured computational behavior.
+
+---
+
+## Embedded Boundary / Irregular Domains
+
+NumKit extends the elliptic solvers to grids containing holes and embedded
+obstacles, using a per-cell classification layered onto the existing dense
+grid. Each cell is one of three types:
+
+- `INTERIOR` — updated normally by the solver
+- `FIXED` — held at a constant value (Dirichlet), e.g. the outer boundary
+  ring or an embedded object at fixed temperature
+- `HOLE` — excluded from the domain, insulated (Neumann / zero-flux)
+
+### Dirichlet Obstacles
+
+A `FIXED` region behaves like a boundary condition sitting inside the
+domain instead of around its edge. Neighboring interior cells read its
+value directly, and the cell itself is never updated.
+
+### Neumann (Insulated) Obstacles
+
+A `HOLE` models empty or insulated space, where no heat crosses its
+boundary. This can't be implemented by simply excluding the missing
+neighbor from the 4-point average — that changes the iterative update
+rule, not just the steady-state answer.
+
+Instead, NumKit uses a ghost-point reflection. The denominator stays
+fixed at 4, and any neighbor that is a `HOLE` is replaced by the center
+cell's own current value before the average is taken:
+
+T_new(i,j) = (T_up + T_down + T_left + T_right) / 4
+
+**Validation:**
+
+- At steady state, this reduces algebraically to averaging over only the
+  real neighbors — the answer one might guess intuitively, but derived
+  here rather than assumed.
+- Near an insulated boundary, the temperature gradient measurably
+  flattens relative to the ambient gradient elsewhere in the same grid,
+  consistent with zero flux crossing the wall.
+
+Implemented across every elliptic solver: Jacobi, Gauss-Seidel, SOR,
+threaded Jacobi, and the CUDA kernel.
+
+### Geometry Helpers
+
+- `maskRect(i0, j0, i1, j1, type)` — carves a rectangular region
+- `maskCircle(ci, cj, r, type)` — carves a circular region, using
+  (i − ci)² + (j − cj)² ≤ r²
+
+### Demo
+
+`apps/heat/main.cpp` accepts an `--obstacle` flag, placing a circular
+insulated obstacle at the center of the domain. `HOLE` cells render in
+black so the obstacle is visually distinct from the surrounding
+temperature field.
+
+![Heat flow around a circular insulated obstacle](docs/images/heat.png)
+
+A second demo, `apps/heat/main_slits.cpp`, places two narrow gaps in an
+otherwise insulated wall. Heat spreads through each gap and merges
+downstream — diffusion doesn't produce the interference fringes a wave
+equation would, but the two streams are visibly distinguishable before
+they blend into one uniform region.
+
+![Heat diffusing through two slits in an insulated wall](docs/images/heat_slits.png)
 
 ---
 
@@ -354,68 +422,40 @@ The objective is to make numerical regressions fail automatically rather than re
 numkit/
 ├── include/
 │   ├── grid.hpp
-│   ├── grid1d.hpp
 │   ├── jacobi.hpp
-│   ├── jacobi_mt.hpp
-│   ├── n_jacobi.hpp
 │   ├── gauss_seidel.hpp
 │   ├── sor.hpp
 │   ├── advection.hpp
 │   ├── diffusion.hpp
-│   ├── diffusion_exact.hpp
-│   ├── black_scholes.hpp
-│   ├── black_scholes_exact.hpp
-│   ├── jacobi_kernel.cuh
-│   ├── jacobi_tiled_kernel.cuh
-│   ├── space_time_log.hpp
-│   ├── stats.hpp
-│   └── ppm.hpp
+│   └── ...
 │
 ├── cuda/
-│   ├── jacobi_validate.cu
-│   ├── jacobi_tiled_validate.cu
-│   ├── jacobi_convergence.cu
-│   ├── bench_gpu.cu
-│   ├── bench_tiled_sweep.cu
-│   └── grid_transfer_test.cu
-│
-├── apps/
-│   └── heat/
-│       └── main.cpp
+│   ├── jacobi.cu
+│   ├── jacobi_tiled.cu
+│   └── ...
 │
 ├── tests/
 │   ├── test_grid.cpp
 │   ├── test_jacobi.cpp
-│   ├── test_solvers.cpp
-│   ├── test_mt.cpp
 │   ├── test_diffusion.cpp
-│   ├── test_diffusion_exact.cpp
 │   ├── test_advection.cpp
-│   ├── test_advection_exact.cpp
-│   ├── test_black_scholes_exact.cpp
-│   ├── test_omega_auto.cpp
-│   ├── diffusion_convergence.cpp
-│   ├── diffusion_study.cpp
-│   ├── omega_sweep.cpp
-│   ├── demo_cfl_violation.cpp
-│   ├── demo_r_violation.cpp
-│   ├── bench_cpu.cpp
-│   ├── bench_mt.cpp
-│   └── validate.cpp
+│   ├── test_convergence.cpp
+│   └── ...
+│
+├── experiments/
+│   ├── convergence/
+│   ├── stability/
+│   ├── cpu/
+│   └── cuda/
 │
 ├── docs/
-│   ├── validation.md
-│   ├── diffusion_study.md
-│   ├── diffusion_convergence.md
-│   ├── omega_study.md
-│   ├── threading_study.md
-│   ├── gpu_speedup_study.md
-│   └── heatmap.png
+│   ├── convergence.md
+│   ├── diffusion.md
+│   ├── advection.md
+│   └── ...
 │
-├── Makefile
 └── .github/
     └── workflows/
-        └── build.yml
 ```
 
 ---
@@ -497,7 +537,6 @@ The long-term goal is to evolve NumKit from a collection of numerical experiment
 
 Planned directions include:
 
-- More systematic boundary-condition abstractions
 - Additional iterative linear solvers
 - Conjugate Gradient
 - GMRES
@@ -508,6 +547,7 @@ Planned directions include:
 - GPU profiling and occupancy analysis
 - Larger-scale performance studies
 - More comprehensive numerical regression testing
+- Black-Scholes PDE implementation and validation
 
 The focus is on making the numerical machinery increasingly **general, verifiable, and performance-aware**.
 
@@ -546,6 +586,7 @@ Santa Clara University
 
 GitHub: [jyahdi-byte](https://github.com/jyahdi-byte)
 LinkedIn: [Jonas Yahdi](https://www.linkedin.com/in/jonas-yahdi-b00a1a226/)
+Email: jyahdi@scu.edu (school) · jyahdi@gmail.com (personal)
 
 ## License
 
