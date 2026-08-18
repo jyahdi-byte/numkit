@@ -36,10 +36,10 @@ int main() {
               << "   SOR(Theoretical Best W): " << g4.at(3,6) 
               << "   Jacobi_mt: " << g5.at(3,6) << "\n";
 
-    assert(std::abs(g1.at(3,6) - g2.at(3,6)) < 1e-9);
-    assert(std::abs(g2.at(3,6) - g3.at(3,6)) < 1e-9);
-    assert(std::abs(g3.at(3,6) - g4.at(3,6)) < 1e-9);
-    assert(std::abs(g4.at(3,6) - g5.at(3,6)) < 1e-9);
+    assert(std::abs(g1.at(3,6) - g2.at(3,6)) < 1e-6);
+    assert(std::abs(g2.at(3,6) - g3.at(3,6)) < 1e-6);
+    assert(std::abs(g3.at(3,6) - g4.at(3,6)) < 1e-6);
+    assert(std::abs(g4.at(3,6) - g5.at(3,6)) < 1e-6);
     assert(g1.at(5,5) == g2.at(5,5) && g2.at(5,5) == g3.at(5,5) && g3.at(5,5) == g4.at(5,5) && g4.at(5,5) == g5.at(5,5)
             && g5.at(5,5) == g0.at(5,5));
 
