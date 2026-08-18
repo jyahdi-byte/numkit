@@ -1,7 +1,10 @@
 #ifndef JACOBI_HPP
 #define JACOBI_HPP
-#include "grid.hpp"
+
 #include <cmath>
+#include <vector>
+
+#include "grid.hpp"
 
 int jacobi_solve(Grid& g, double tol, int max_iter){
     Grid newg = g;
@@ -11,7 +14,12 @@ int jacobi_solve(Grid& g, double tol, int max_iter){
         for (int i = 1; i < g.getRows() - 1; i++){
             for (int j = 1; j < g.getCols() - 1; j++){
                 if (g.getType(i,j) == INTERIOR){
-                    newg.at(i,j) = (g.at(i+1,j) + g.at(i-1,j) + g.at(i,j+1) + g.at(i,j-1))/4;
+                    std::vector<double> jac_components = {g.at(i+1,j), g.at(i-1,j), g.at(i,j+1), g.at(i,j-1)}; 
+                    if (g.getType(i+1,j) == HOLE){jac_components[0] = g.at(i,j);}
+                    if (g.getType(i-1,j) == HOLE){jac_components[1] = g.at(i,j);}
+                    if (g.getType(i,j+1) == HOLE){jac_components[2] = g.at(i,j);}
+                    if (g.getType(i,j-1) == HOLE){jac_components[3] = g.at(i,j);}
+                    newg.at(i,j) = (jac_components[0] + jac_components[1] + jac_components[2] + jac_components[3])/4;
                     change = std::abs(newg.at(i,j) - g.at(i,j));
                     if (change >= maxChange){
                         maxChange = change; 

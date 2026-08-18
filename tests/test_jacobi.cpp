@@ -34,14 +34,13 @@ int main() {
     g1.maskRect(4,4,6,6, HOLE);
     Grid oldg1 = g1;
     jacobi_solve(g1, 1e-6, 1000);
-    for (int j = 0; j < 5; j++){
-        assert(std::abs(g1.at(1,j) - g1.at(1,9-j)) < 1e-9);
-    }
-    for (int i = 4; i < 6; i++){
-        for (int j = 4; j < 6; j++){
-            assert(g1.at(i,j) == oldg1.at(i,j));
-        }
-    }
+    std::cout << "diff near hole: " << std::abs(g1.at(3,4) - g1.at(2,4)) << "\n";
+    for (int j = 0; j < 5; j++){assert(std::abs(g1.at(1,j) - g1.at(1,9-j)) < 1e-9);}
+    for (int i = 4; i < 6; i++){for (int j = 4; j < 6; j++){assert(g1.at(i,j) == oldg1.at(i,j));}}
+    std::cout << "diff near hole: " << std::abs(g1.at(3,4) - g1.at(2,4)) << "\n";
+    assert(std::abs(g1.at(3,4) - g1.at(2,4)) < 1.0);
+
+
 
     std::cout << "PASS\n";
     return 0;
