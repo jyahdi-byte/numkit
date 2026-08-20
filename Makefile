@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe
+all: test_solvers.exe omega_sweep.exe red_black_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -11,6 +11,9 @@ test_jacobi.exe: include/grid.hpp include/jacobi.hpp tests/test_jacobi.cpp
 
 omega_sweep.exe: include/grid.hpp include/sor.hpp tests/omega_sweep.cpp
 	g++ -std=c++20 -Wall -I include tests/omega_sweep.cpp -o omega_sweep.exe
+
+red_black_sweep.exe: include/grid.hpp include/gauss_seidel.hpp include/sor.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp tests/red_black_sweep.cpp
+	g++ -std=c++20 -Wall -I include tests/red_black_sweep.cpp -o red_black_sweep.exe
 
 heat.exe: include/grid.hpp include/sor.hpp include/ppm.hpp apps/heat/main.cpp
 	g++ -std=c++20 -Wall -I include apps/heat/main.cpp -o heat.exe
