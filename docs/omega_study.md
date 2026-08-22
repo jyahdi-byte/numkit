@@ -6,7 +6,7 @@ study measures the best omega experimentally and checks it against
 theory.
 
 ## Setup
-All runs solve a 10×10 grid with the top edge held at 100 degrees and
+Sweep counts below are produced by `tests/omega_sweep.cpp`. All runs solve a 10×10 grid with the top edge held at 100 degrees and
 the other edges at 0, using tolerance 1e-6 and max_iter 10,000. Omega
 runs from 1.0 to 1.9 in steps of 0.05, with a fresh grid constructed
 for each run.

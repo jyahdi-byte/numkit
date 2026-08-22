@@ -10,7 +10,7 @@ what the solvers converge to, and measures what it costs (or saves) in
 sweep count before any threading work is done.
 
 ## Setup
-All runs solve an N×N grid with the top edge held at 10 degrees and the
+Sweep counts below are produced by `tests/red_black_sweep.cpp`. All runs solve an N×N grid with the top edge held at 10 degrees and the
 other edges at 0, tol = 1e-10, max_iter = 20,000, with a fresh grid
 constructed per run. N = 10, 20, 40, 80. SOR and SOR-RB both use the
 theoretical-optimum omega for each grid size. Correctness (that

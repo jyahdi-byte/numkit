@@ -9,7 +9,7 @@ theoretical-optimal omega, the strongest classical baseline available,
 not plain GS.
 
 ## Setup
-Same N x N grid as red_black_study.md: top edge held at 10, other edges
+Sweep counts below are produced by `tests/cg_sweep.cpp`. Same N x N grid as red_black_study.md: top edge held at 10, other edges
 at 0, tol = 1e-10, max_iter = 20,000. N = 10, 20, 40, 80. SOR uses the
 theoretical-optimum omega for each grid size, computed the same way
 omega_study.md derived it. Correctness (cg_solve converges to the same

@@ -5,7 +5,9 @@ split across threads. This study measures how much that actually
 buys on real hardware, and what limits it.
 
 ## Setup
-All runs solve a 200×200 grid with the top edge held at 100 degrees,
+Timings below are produced by `tests/test_mt.cpp`, run once per thread
+count with the hardcoded `4` in `jacobi_mt_solve(g1, 1e-6, 100000, 4)`
+changed by hand for each row. All runs solve a 200×200 grid with the top edge held at 100 degrees,
 tol = 1e-6, using jacobi_mt_solve with thread counts 1, 2, 4, and 8
 and a fresh grid per run. Hardware: 4 physical cores, 8 logical
 processors.

@@ -9,7 +9,7 @@ away from cn = 1 the scheme blurs a sharp shape instead of translating
 it exactly. This study measures how much.
 
 ## Setup
-50-point periodic grid, dx = 0.02, initial condition a step block at
+RMSE values below are produced by `tests/diffusion_study.cpp`. 50-point periodic grid, dx = 0.02, initial condition a step block at
 points 5-8 (value 1, everywhere else 0), 20 timesteps. Courant number
 swept from 0.1 to 0.9 in steps of 0.2. Each run is compared against
 the exact solution — the same initial block run through the solver at

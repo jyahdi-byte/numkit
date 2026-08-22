@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe
+all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe test_rb_mt.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp include/conjugate_gradient.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -26,6 +26,9 @@ validate.exe: include/grid.hpp include/sor.hpp tests/validate.cpp
 
 test_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/test_mt.cpp
 	g++ -std=c++20 -Wall -pthread -I include tests/test_mt.cpp -o test_mt.exe
+
+test_rb_mt.exe: include/grid.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp include/gauss_seidel_rb_mt.hpp include/sor_rb_mt.hpp tests/test_rb_mt.cpp
+	g++ -std=c++20 -Wall -pthread -I include tests/test_rb_mt.cpp -o test_rb_mt.exe
 
 bench_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/bench_mt.cpp
 	g++ -std=c++20 -Wall -pthread -I include tests/bench_mt.cpp -o bench_mt.exe

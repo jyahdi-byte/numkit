@@ -5,7 +5,7 @@ too. This study grades them against exact answers, and checks that
 the error shrinks with grid refinement at the rate theory predicts.
 
 ## Method
-The trick is to manufacture a problem whose answer is known in
+Max error values below are produced by `tests/validate.cpp`. The trick is to manufacture a problem whose answer is known in
 advance. Pick a function T(x,y) whose Laplacian is zero everywhere
 (a harmonic function), and set the grid's boundary cells to its
 values. Since a settled field is determined entirely by its edges,
