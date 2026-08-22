@@ -30,6 +30,8 @@ The goal is not simply to produce a numerical answer, but to understand **why th
 
 - Implemented finite-difference solvers for **elliptic, parabolic, and hyperbolic PDEs**
 - Implemented **Jacobi, Gauss-Seidel, and SOR** iterative methods
+- Implemented red-black (checkerboard) ordering for Gauss-Seidel and SOR, removing the data race that blocks naive multithreading
+- Implemented matrix-free **Conjugate Gradient** for elliptic systems, applying the 5-point stencil directly instead of assembling an explicit matrix
 - Validated numerical solutions against analytical solutions
 - Performed grid-refinement and convergence studies
 - Investigated CFL and diffusion stability limits
@@ -56,8 +58,9 @@ NumKit solves steady-state elliptic problems such as Laplace's equation:
 Implemented iterative methods:
 
 - Jacobi
-- Gauss-Seidel
-- Successive Over-Relaxation (SOR)
+- Gauss-Seidel (standard and red-black ordering)
+- Successive Over-Relaxation (SOR) (standard and red-black ordering)
+- Conjugate Gradient (matrix-free)
 
 ### Analytical Validation
 
@@ -167,6 +170,68 @@ they blend into one uniform region.
 
 ---
 
+## Red-Black Ordering
+
+Gauss-Seidel and SOR update each cell in place, reading a mix of old
+and new neighbor values within the same sweep. That's what makes them
+converge faster than Jacobi, but it also means threading them the way
+Jacobi is threaded introduces a data race: one thread can read a
+neighbor cell while another thread is still writing to it.
+
+Red-black (checkerboard) ordering splits each sweep into two passes
+over alternating cells, based on the parity of `i + j`. Within a
+single pass, no cell being updated ever depends on another cell being
+updated in that same pass, which makes each pass safe to split across
+threads.
+
+NumKit implements red-black variants of both Gauss-Seidel and SOR and
+validates them against the standard ordering: same converged solution,
+essentially the same sweep count.
+
+| Method | Sweeps (80×80 grid) |
+|---|---:|
+| Gauss-Seidel | 11,346 |
+| Gauss-Seidel, red-black | 11,365 |
+| SOR | 323 |
+| SOR, red-black | 321 |
+
+The reordering costs almost nothing in convergence speed. Its real
+value is what it unlocks: a race-free update pattern the plain
+in-place version can't offer, and the foundation for a threaded and
+CUDA Gauss-Seidel/SOR implementation. See `docs/red_black_study.md`
+for the full grid-size sweep.
+
+## Conjugate Gradient
+
+Jacobi, Gauss-Seidel, and SOR are all fixed-point methods: repeat an
+update rule and hope it converges. Conjugate Gradient instead builds
+up the solution using a sequence of A-orthogonal search directions,
+which for an n-unknown system reaches the exact answer in at most n
+steps.
+
+NumKit's implementation is matrix-free: instead of assembling the
+coefficient matrix A, it applies the same 5-point stencil the other
+solvers already use directly to a search-direction vector, extended
+with the same FIXED/HOLE handling used elsewhere in the codebase.
+
+Measured against Gauss-Seidel and SOR at its theoretical-optimal ω:
+
+| Grid Size | Gauss-Seidel | SOR | Conjugate Gradient |
+|---:|---:|---:|---:|
+| 10 | 179 | 39 | 24 |
+| 20 | 756 | 80 | 60 |
+| 40 | 2,977 | 161 | 124 |
+| 80 | 11,346 | 323 | 252 |
+
+Gauss-Seidel scales like O(N²) as the grid grows; SOR and Conjugate
+Gradient both scale closer to O(N). Conjugate Gradient outperforms
+even the tuned SOR baseline at every grid size tested, without needing
+an ω parameter at all - a real advantage on irregular domains, where
+SOR's closed-form optimal ω doesn't exist. See
+`docs/conjugate_gradient_study.md` for the full comparison.
+
+---
+
 # Hyperbolic PDEs
 
 NumKit implements an upwind finite-difference solver for the 1D advection equation:
@@ -237,6 +302,16 @@ Measured refinement ratios include:
 matching the expected second-order behavior.
 
 At the finest resolution, the measured ratio begins to deviate as the number of time steps becomes very large, providing an example of accumulated floating-point error becoming more significant relative to discretization error.
+
+## Black-Scholes
+
+A change of variables reduces the Black-Scholes PDE to the same 1D heat equation the diffusion solver already handles, so `black_scholes.hpp` reuses that FTCS machinery directly instead of implementing a separate solver.
+
+The result is validated against the closed-form Black-Scholes formula for a European call option:
+
+| Measured price | Closed-form price | Relative error |
+|---:|---:|---:|
+| 10.4206 | 10.4506 | 0.29% |
 
 ---
 
@@ -424,7 +499,10 @@ numkit/
 │   ├── grid.hpp
 │   ├── jacobi.hpp
 │   ├── gauss_seidel.hpp
+│   ├── gauss_seidel_rb.hpp
 │   ├── sor.hpp
+│   ├── sor_rb.hpp
+│   ├── conjugate_gradient.hpp
 │   ├── advection.hpp
 │   ├── diffusion.hpp
 │   └── ...
@@ -452,6 +530,8 @@ numkit/
 │   ├── convergence.md
 │   ├── diffusion.md
 │   ├── advection.md
+│   ├── red_black_study.md
+│   ├── conjugate_gradient_study.md
 │   └── ...
 │
 └── .github/
@@ -537,9 +617,9 @@ The long-term goal is to evolve NumKit from a collection of numerical experiment
 
 Planned directions include:
 
-- Additional iterative linear solvers
-- Conjugate Gradient
 - GMRES
+- Preconditioned Conjugate Gradient (diagonal/Jacobi preconditioner)
+- Threaded and CUDA red-black Gauss-Seidel/SOR
 - More reusable PDE/discretization abstractions
 - 2D and 3D extensions
 - More advanced CUDA implementations
@@ -547,7 +627,6 @@ Planned directions include:
 - GPU profiling and occupancy analysis
 - Larger-scale performance studies
 - More comprehensive numerical regression testing
-- Black-Scholes PDE implementation and validation
 
 The focus is on making the numerical machinery increasingly **general, verifiable, and performance-aware**.
 
