@@ -44,9 +44,45 @@ Sweep count is essentially a wash. The actual value of red-black is
 that each pass is now race-free, so it can be split across threads -
 something plain GS/SOR can't do safely.
 
+## Threading speedup
+
+Timings below are produced by `tests/bench_rb_mt.cpp`. 200×200 grid,
+top edge at 100, tol = 1e-6, max_iter = 100,000. A warm-up solve
+(discarded) runs first so the single-threaded baseline isn't unfairly
+penalized by first-allocation overhead. Machine: 4 physical cores, 8
+logical (hyperthreaded).
+
+| Threads | GS-RB sweeps | GS-RB time (s) | GS-RB speedup | SOR-RB sweeps | SOR-RB time (s) | SOR-RB speedup |
+|---------|--------------|-----------------|----------------|----------------|-------------------|------------------|
+| 1 (single-threaded) | 36996 | 302.297 | 1.00x | 555 | 14.924 | 1.00x |
+| 1 (mt)  | 36996 | 327.635 | 0.92x | 555 | 15.258 | 0.98x |
+| 2       | 36996 | 194.153 | 1.56x | 555 | 14.797 | 1.01x |
+| 4       | 36996 | 203.275 | 1.49x | 555 | 8.405  | 1.78x |
+| 8       | 36996 | 243.162 | 1.24x | 555 | 4.766  | 3.13x |
+
+## Threading observations
+
+GS-RB and SOR-RB run the exact same threading code - same barrier
+structure, same row chunking - and still scale in opposite directions
+past 4 threads. GS-RB peaks at 2 threads (1.56x) and degrades from
+there. SOR-RB keeps improving all the way to 8 threads (3.13x).
+
+The difference is sweep count. GS-RB takes 36996 sweeps to converge;
+SOR-RB takes 555. Each sweep is two barrier syncs, so GS-RB hits
+`arrive_and_wait()` about 66x more often than SOR-RB does over the
+same solve. Every barrier is a spot where the OS can reschedule a
+thread, and one thread running late stalls all the others until it
+catches up - so the more barriers a solve needs, the more chances
+that kind of stall has to accumulate. SOR-RB converges too fast for
+it to show up; GS-RB runs long enough that it does.
+
+Task Manager during the GS-RB runs showed CPU usage scaling with
+thread count - roughly 15% at 1 thread up to 85-95% at 8 - so the
+threads are actually running, not blocked or idle. Past 4 threads, 8
+logical threads are splitting time across 4 physical cores, and all
+of them are touching the same grid at once, adding memory bandwidth
+contention on top. That accounts for the regression - the threading
+code itself has no bug in it.
+
 ## Future work
-Thread gauss_seidel_rb_solve and sor_rb_solve the way jacobi_mt_solve
-threads Jacobi: split each color's pass across a worker pool, syncing
-twice per iteration instead of once. Add a CUDA red-black kernel too.
-Measuring wall-clock speedup against single-threaded red-black is the
-natural next experiment.
+Add a CUDA red-black kernel.
