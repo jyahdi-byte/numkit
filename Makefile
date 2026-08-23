@@ -44,6 +44,10 @@ jacobi-validate: include/grid.hpp include/jacobi.hpp cuda/jacobi_validate.cu
 	nvcc -I include cuda/jacobi_validate.cu -o jacobi_validate.exe
 	./jacobi_validate.exe
 
+gauss-seidel-rb-validate: include/grid.hpp include/gauss_seidel_rb.hpp include/gauss_seidel_rb_kernel.cuh cuda/gauss_seidel_rb_validate.cu
+	nvcc -I include cuda/gauss_seidel_rb_validate.cu -o gauss_seidel_rb_validate.exe
+	./gauss_seidel_rb_validate.exe
+
 bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp cuda/bench_gpu.cu
 	nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu.exe
 	./bench_gpu.exe
