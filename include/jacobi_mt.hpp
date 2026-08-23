@@ -7,17 +7,9 @@
 #include <atomic>
 #include <functional>
 #include <cmath>
-#include "grid.hpp"
+#include <algorithm>
 
-double max_element(const std::vector<double> nums){
-    double max = nums[0];
-    for (size_t i = 0; i < nums.size(); i++){
-        if (nums[i] > max){
-            max = nums[i];
-        } 
-    }
-    return max;
-}
+#include "grid.hpp" 
 
 void sweep_rows(const Grid& g, Grid& newg, int r_start, int r_end, double& localMax){
     localMax = 0;
@@ -60,7 +52,7 @@ int jacobi_mt_solve(Grid& g, double tol, int max_iter, int num_threads){
     // swap + tol check, runs once per round instead of every sweep spawning threads
     std::function<void()> on_complete = [&](){
         g = newg;
-        double maxChange = max_element(localMaxes);
+        double maxChange = *std::max_element(localMaxes.begin(), localMaxes.end());
         iters_done++;
         if (maxChange <= tol) converged.store(true);
     };

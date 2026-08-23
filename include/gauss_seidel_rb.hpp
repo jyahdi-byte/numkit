@@ -3,7 +3,7 @@
 #include "grid.hpp"
 #include <cmath>
 #include <vector>
-
+ 
 int gauss_seidel_rb_solve(Grid& g, double tol, int max_iter){
     for (int k = 0; k < max_iter; k++){
         double maxChange = 0;

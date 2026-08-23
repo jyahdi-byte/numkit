@@ -12,7 +12,7 @@ int main(){
     for (int j = 0; j < g.getCols(); j++){g.at(0,j) = 100;}
     g.maskRect(40, 40, 60, 60, HOLE);
     Grid g0 = g;;
-
+ 
 
     int rows = g.getRows();
     int cols = g.getCols();

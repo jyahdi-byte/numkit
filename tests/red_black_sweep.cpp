@@ -38,11 +38,11 @@ int main(){
         sor_rb_sweeps.push_back(sor_rb_solve(sor_rb_grids[k], 1e-10, 20000));
     }
     std::vector<std::vector<int>> all_sweeps = {gs_sweeps, sor_sweeps, gs_rb_sweeps, sor_rb_sweeps};
-
+ 
     std::cout << "SWEEP COUNTS\n";
     for (size_t i = 0; i < grids.size(); i++){
         std::cout << "\n" << "Grid Size: " << 10 * std::pow(2, i) << "\n";
-        for (size_t j = 0; j < grids.size(); j++){
+        for (size_t j = 0; j < all_sweeps.size(); j++){
             std::cout << solverNames[j] << ": " << all_sweeps[j][i] << "\n";
         }
     }

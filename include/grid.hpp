@@ -1,8 +1,9 @@
 #ifndef GRID_HPP
 #define GRID_HPP
 
-#include <vector>
+#include <vector> 
 #include <cassert>
+#include <cmath>
 
 enum CellType { INTERIOR, FIXED, HOLE };
 
@@ -53,6 +54,14 @@ public:
         for (int i = i0; i < i1; i++){
             for (int j = j0; j < j1; j++){
                 setType(i, j, type);
+            }
+        }
+    }
+
+    void maskCircle(int ci, int cj, int r, CellType type){
+        for (int i = ci - r; i < ci + r; i++){
+            for (int j = cj - r; j < cj + r; j++){
+                if (std::pow(i - ci, 2) + std::pow(j - cj, 2) <= std::pow(r, 2)){setType(i, j, type);}
             }
         }
     }

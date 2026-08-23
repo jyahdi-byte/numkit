@@ -44,5 +44,58 @@ needs no tuning at all.
 ## Future work
 Run this same comparison on a grid with a large HOLE region, where SOR
 has no formula to fall back on and has to be tuned by search instead.
-Also worth trying: a diagonal (Jacobi) preconditioner on CG, which
-should push its sweep count down further without changing correctness.
+
+## Preconditioned CG
+
+`pcg_solve` adds a diagonal (Jacobi) preconditioner: each cell's
+residual is divided by its own diagonal value from `diag()` before
+CG picks a search direction. On a plain grid every cell's diagonal
+is 4, so this divides everything by the same constant and changes
+nothing - preconditioning only has something to work with once
+`HOLE` cells make the diagonal vary from cell to cell (`diag()`
+subtracts 1 per HOLE neighbor, so it ranges 0-4). Correctness (pcg_solve
+converges to the same values as cg_solve, on both a plain grid and one
+with HOLE regions) is verified with real asserts in test_solvers.cpp.
+
+## Setup
+Sweep counts below are produced by `tests/pcg_sweep.cpp`. Same N x N
+grid as the rest of this study: top edge held at 10, other edges at
+0, tol = 1e-10, max_iter = 10,000. Two geometries: a single 3x3 HOLE
+block placed at roughly the grid's center, and a checkerboard of 3x3
+HOLE blocks tiled every 4 cells (so a 1-cell wall separates adjacent
+blocks - thin enough that a wall cell touches HOLE on two sides,
+dropping its diagonal to 2).
+
+## Results
+| Grid Size | CG (single hole) | PCG (single hole) | CG (checkerboard) | PCG (checkerboard) |
+|-----------|-------------------|--------------------|--------------------|--------------------|
+| 10        | -                 | -                  | 29                 | 26                 |
+| 20        | 82                | 80                 | 52                 | 52                 |
+| 40        | 164               | 164                | 137                | 135                |
+| 80        | 316               | 317                | 266                | 270                |
+
+## PCG observations
+Neither geometry shows a real win. Single hole barely moves the
+needle (82 vs 80, then a wash, then PCG a sweep *worse* at N=80).
+The checkerboard was built specifically to force diagonal variation -
+checked directly at N=40, 522 of 693 interior cells sit at diagonal 2
+instead of 4 - and still lands in the same place: a small win at
+N=10, a wash at N=20 and N=40, PCG four sweeps worse at N=80.
+
+The reason traces back to what a diagonal preconditioner can actually
+see. It corrects each cell's own scale, one cell at a time - it has
+no information about the grid's overall shape. What makes CG slow on
+the checkerboard isn't any single cell's diagonal; it's the maze-like
+geometry itself, threading interior cells through a lattice of 1-cell
+corridors. That's a global property of the domain, and a diagonal
+preconditioner is a purely local tool. It was never going to reach a
+problem like this one.
+
+## PCG future work
+Give cells their own coefficient (varying material properties instead
+of just HOLE/INTERIOR) rather than the fixed 4-per-cell stencil this
+solver assumes throughout. That's the kind of variation diagonal
+preconditioning is actually built for, and would be a real test of
+whether it earns its keep here - a bigger change than anything else in
+this study, since apply_A, compute_b, and diag() would all need to
+read a per-cell coefficient instead of assuming uniform 4.

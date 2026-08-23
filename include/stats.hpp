@@ -45,4 +45,5 @@ double max_index(std::vector<double>& vec){
     return result;
 }
 
+
 #endif
