@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe test_rb_mt.exe
+all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe pcg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_advection.exe test_advection_exact.exe diffusion_study.exe test_grid.exe test_jacobi.exe test_diffusion.exe test_diffusion_exact.exe diffusion_convergence.exe test_black_scholes_exact.exe test_rb_mt.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp include/conjugate_gradient.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -17,6 +17,9 @@ red_black_sweep.exe: include/grid.hpp include/gauss_seidel.hpp include/sor.hpp i
 
 cg_sweep.exe: include/grid.hpp include/gauss_seidel.hpp include/sor.hpp include/conjugate_gradient.hpp tests/cg_sweep.cpp
 	g++ -std=c++20 -Wall -I include tests/cg_sweep.cpp -o cg_sweep.exe
+
+pcg_sweep.exe: include/grid.hpp include/conjugate_gradient.hpp tests/pcg_sweep.cpp
+	g++ -std=c++20 -Wall -I include tests/pcg_sweep.cpp -o pcg_sweep.exe
 
 heat.exe: include/grid.hpp include/sor.hpp include/ppm.hpp apps/heat/main.cpp
 	g++ -std=c++20 -Wall -I include apps/heat/main.cpp -o heat.exe

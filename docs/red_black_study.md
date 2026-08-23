@@ -84,5 +84,16 @@ of them are touching the same grid at once, adding memory bandwidth
 contention on top. That accounts for the regression - the threading
 code itself has no bug in it.
 
+## CUDA
+
+Both solvers also have a red-black CUDA kernel (`gauss_seidel_rb_kernel.cuh`,
+`sor_rb_kernel.cuh`), one thread per interior cell, red and black as two
+separate kernel launches with a `cudaDeviceSynchronize()` between them in
+place of a CPU-side barrier. Validated against `gauss_seidel_rb_solve` and
+`sor_rb_solve` on a T4 GPU (Colab) via `cuda/gauss_seidel_rb_validate.cu`
+and `cuda/sor_rb_validate.cu` - both pass their asserts with no output.
+
 ## Future work
-Add a CUDA red-black kernel.
+Wall-clock speedup measurement for the CUDA kernels (this study only checked
+correctness, not timing) - same idea as the CPU threading section above, but
+against the single-threaded CPU baseline instead of thread count.
