@@ -22,6 +22,7 @@ int main() {
     Grid g6 = g1;
     Grid g7 = g1;
     Grid g8 = g1;
+    Grid g9 = g1;
     Grid g0 = g1;
 
     int jac = jacobi_solve(g1, 1e-10, 10000);
@@ -32,6 +33,7 @@ int main() {
     int gs_rb = gauss_seidel_rb_solve(g6, 1e-10, 10000);
     int sor_rb = sor_rb_solve(g7, 1e-10, 10000);
     int cg = cg_solve(g8, 1e-10, 10000);
+    int pcg = pcg_solve(g9, 1e-10, 10000);
 
     std::cout << "Jacobi sweeps:                   " << jac << "\n";
     std::cout << "Gauss-Seidel sweeps:             " << gs  << "\n";
@@ -40,7 +42,8 @@ int main() {
     std::cout << "Jacobi_mt sweeps:                " << jac_mt << "\n";
     std::cout << "Gauss-Seidel-RB sweeps:                " << gs_rb << "\n";
     std::cout << "Sor-RB (Theoretical Best w) sweeps: " << sor_rb << "\n";
-    std::cout << "Conjugate Gradient sweeps:       " << cg << "\n\n";
+    std::cout << "Conjugate Gradient sweeps:       " << cg << "\n";
+    std::cout << "Preconditioned Conjugate Gradient sweeps: " << pcg << "\n\n";
 
     std::cout << "(3,6)  Jacobi: " << g1.at(3,6) << "\n"
               << "   GS: "        << g2.at(3,6) << "\n"
@@ -49,7 +52,8 @@ int main() {
               << "   Jacobi_mt: " << g5.at(3,6) << "\n"
               << "   GS-RB: " << g6.at(3,6) << "\n"
               << "   SOR-RB: " << g7.at(3,6) << "\n"
-              << "   CG: " << g8.at(3,6) << "\n\n";
+              << "   CG: " << g8.at(3,6) << "\n"
+              << "   PCG: " << g9.at(3,6) << "\n\n";
 
     assert(std::abs(g1.at(3,6) - g2.at(3,6)) < 1e-6);
     assert(std::abs(g2.at(3,6) - g3.at(3,6)) < 1e-6);
@@ -58,8 +62,9 @@ int main() {
     assert(std::abs(g5.at(3,6) - g6.at(3,6)) < 1e-6);
     assert(std::abs(g6.at(3,6) - g7.at(3,6)) < 1e-6);
     assert(std::abs(g7.at(3,6) - g8.at(3,6)) < 1e-6);
+    assert(std::abs(g8.at(3,6) - g9.at(3,6)) < 1e-6);
     assert(g1.at(5,5) == g2.at(5,5) && g2.at(5,5) == g3.at(5,5) && g3.at(5,5) == g4.at(5,5) && g4.at(5,5) == g5.at(5,5)
-            && g5.at(5,5) == g6.at(5,5) && g6.at(5,5) == g7.at(5,5) && g7.at(5,5) == g8.at(5,5) && g8.at(5,5) == g0.at(5,5));
+            && g5.at(5,5) == g6.at(5,5) && g6.at(5,5) == g7.at(5,5) && g7.at(5,5) == g8.at(5,5) && g8.at(5,5) == g9.at(5,5) && g9.at(5,5) == g0.at(5,5));
 
     std::cout << "PASS\n";
 }

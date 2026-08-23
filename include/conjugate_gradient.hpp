@@ -36,6 +36,15 @@ double maxDifference(std::vector<double> a, std::vector<double> b){
     return maxChange;
 }
 
+int diag(const Grid& g, int i, int j){
+    int holes = 0;
+    if (g.getType(i+1,j) == HOLE){holes++;}
+    if (g.getType(i-1,j) == HOLE){holes++;}
+    if (g.getType(i,j+1) == HOLE){holes++;}
+    if (g.getType(i,j-1) == HOLE){holes++;}
+    return 4 - holes;
+}
+
 std::vector<double> compute_b(const Grid& g) {
     int rows = g.getRows();
     int cols = g.getCols();
@@ -105,6 +114,63 @@ int cg_solve(Grid& A, double tol, int iterations){
         double beta = dot(r_new, r_new) / dot(r, r);
         p = addVectors(r_new, scaleVector(p, beta));
         r = r_new; 
+    }
+    for (int i = 0; i < A.getRows(); i++){
+        for (int j = 0; j < A.getCols(); j++){
+            if (A.getType(i, j) == INTERIOR){
+                A.at(i, j) = x[i * A.getCols() + j];
+            }
+        }
+    }
+    return sweeps;
+}
+
+int pcg_solve(Grid& A, double tol, int iterations){
+    int sweeps = 0;
+    std::vector<double> x;
+    for (int i = 0; i < A.getRows(); i++)
+        for (int j = 0; j < A.getCols(); j++){
+            x.push_back(0);
+        }
+    std::vector<double> b = compute_b(A);
+    std::vector<double> r = b;
+    std::vector<double> z = r;
+    for (int i = 1; i < A.getRows() - 1; i++){
+        for (int j = 1; j < A.getCols() - 1; j++){
+            if (A.getType(i, j) == INTERIOR){
+                z[i * A.getCols() + j] /= diag(A, i, j);
+            }
+        } 
+    }
+    std::vector<double> p = z;
+    for (int k = 0; k < iterations; k++){
+        std::vector<double> Ap = apply_A(p, A.getRows(), A.getCols(), A);
+        double alpha = dot(r, z) / dot (p , Ap);
+        std::vector<double> old_x = x;
+        x = addVectors(x, scaleVector(p, alpha));
+        sweeps++;
+        if (tol >= maxDifference(x, old_x)){
+            for (int i = 0; i < A.getRows(); i++){
+                for (int j = 0; j < A.getCols(); j++){
+                    if (A.getType(i, j) == INTERIOR){
+                        A.at(i, j) = x[i * A.getCols() + j];
+                    }
+                }
+            }
+            return sweeps;
+        }
+        std::vector<double> r_new = addVectors(r, scaleVector(Ap, -alpha));
+        std::vector<double> z_new = r_new;
+        for (int i = 1; i < A.getRows() - 1; i++){
+            for (int j = 1; j < A.getCols() - 1; j++){
+                if (A.getType(i, j) == INTERIOR){
+                    z_new[i * A.getCols() + j] /= diag(A, i, j);
+                }
+            }
+        }
+        double beta = dot(r_new, z_new) / dot(r, z);
+        p = addVectors(z_new, scaleVector(p, beta));
+        r = r_new; z = z_new;
     }
     for (int i = 0; i < A.getRows(); i++){
         for (int j = 0; j < A.getCols(); j++){
