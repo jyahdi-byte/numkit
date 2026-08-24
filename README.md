@@ -1,6 +1,6 @@
 # NumKit
 
-A C++/CUDA numerical computing library for finite-difference PDEs: **Jacobi, Gauss-Seidel, SOR, and Conjugate Gradient (plain and diagonal-preconditioned), with correctness verification, convergence studies, CPU threading (including red-black Gauss-Seidel/SOR), and CUDA kernels (Jacobi and red-black Gauss-Seidel/SOR)**.
+A C++ numerical computing library focused on **finite-difference PDE solvers, numerical verification, convergence analysis, CPU parallelism, and CUDA acceleration**.
 
 NumKit explores the full numerical-computing workflow:
 
@@ -28,16 +28,12 @@ The goal is not simply to produce a numerical answer, but to understand **why th
 
 ## Highlights
 
-- Implemented finite-difference solvers for **elliptic, parabolic, and hyperbolic PDEs**
+- Implemented finite-difference solvers for **elliptic PDEs**
 - Implemented **Jacobi, Gauss-Seidel, and SOR** iterative methods
 - Implemented red-black (checkerboard) ordering for Gauss-Seidel and SOR, removing the data race that blocks naive multithreading
 - Implemented matrix-free **Conjugate Gradient** for elliptic systems, applying the 5-point stencil directly instead of assembling an explicit matrix
-- Added a diagonal (Jacobi) preconditioner to Conjugate Gradient, and measured where it does and doesn't earn its keep
-- Threaded red-black Gauss-Seidel and SOR using a persistent worker pool (`std::barrier`), the same pattern as threaded Jacobi
-- Implemented CUDA kernels for red-black Gauss-Seidel and SOR, one thread per interior cell, red and black as separate kernel launches
 - Validated numerical solutions against analytical solutions
 - Performed grid-refinement and convergence studies
-- Investigated CFL and diffusion stability limits
 - Built conservation-based numerical tests
 - Parallelized Jacobi iteration with C++ threads
 - Developed a persistent worker model using `std::barrier`
@@ -63,7 +59,7 @@ Implemented iterative methods:
 - Jacobi
 - Gauss-Seidel (standard and red-black ordering)
 - Successive Over-Relaxation (SOR) (standard and red-black ordering)
-- Conjugate Gradient (matrix-free, plain and diagonal-preconditioned)
+- Conjugate Gradient (matrix-free)
 
 ### Analytical Validation
 
@@ -200,43 +196,9 @@ essentially the same sweep count.
 
 The reordering costs almost nothing in convergence speed. Its real
 value is what it unlocks: a race-free update pattern the plain
-in-place version can't offer. See `docs/red_black_study.md` for the
-full grid-size sweep.
-
-### CPU Threading
-
-Both red-black solvers are threaded using a persistent worker pool
-(`std::barrier`), the same pattern as threaded Jacobi: rows split
-across threads, two barrier syncs per iteration instead of one (one
-after the red pass, one after black). Validated bit-identical against
-the single-threaded originals - same sweep count, `maxdiff = 0`.
-
-| Threads | Gauss-Seidel-RB speedup | SOR-RB speedup |
-|---:|---:|---:|
-| 1 | 0.92× | 0.98× |
-| 2 | 1.56× | 1.01× |
-| 4 | 1.49× | 1.78× |
-| 8 | 1.24× | 3.13× |
-
-The two solvers run identical threading code and still scale in
-opposite directions past 4 threads. Gauss-Seidel-RB peaks at 2 threads
-and degrades from there; SOR-RB keeps improving to 8. The difference
-traces back to sweep count: Gauss-Seidel-RB needs ~37,000 sweeps to
-converge on this grid, SOR-RB needs ~550 - about 66× more barrier
-synchronizations, and each one is a chance for a stalled thread to
-hold up every other thread. On a 4-physical/8-logical-core machine,
-that adds up enough to erase the benefit of the extra threads for the
-solver that needs tens of thousands of them. See
-`docs/red_black_study.md` for the full measurement and CPU-usage
-data behind this.
-
-### CUDA
-
-Both solvers also have a red-black CUDA kernel, one thread per
-interior cell, red and black as two separate kernel launches with a
-`cudaDeviceSynchronize()` between them in place of a CPU-side barrier.
-Validated against the CPU red-black solvers on a Tesla T4; wall-clock
-GPU benchmarking hasn't been done yet (see Future Development).
+in-place version can't offer, and the foundation for a threaded and
+CUDA Gauss-Seidel/SOR implementation. See `docs/red_black_study.md`
+for the full grid-size sweep.
 
 ## Conjugate Gradient
 
@@ -267,110 +229,9 @@ an ω parameter at all - a real advantage on irregular domains, where
 SOR's closed-form optimal ω doesn't exist. See
 `docs/conjugate_gradient_study.md` for the full comparison.
 
-### Preconditioning
-
-A diagonal (Jacobi) preconditioner divides each cell's residual by
-its own diagonal value before Conjugate Gradient picks a search
-direction. On a plain grid every cell's diagonal is 4, so this is a
-no-op - preconditioning only has something to work with once `HOLE`
-cells make the diagonal vary from cell to cell.
-
-Tested on two geometries: a single small `HOLE`, and a checkerboard
-of `HOLE` blocks tiled with 1-cell walls between them, built
-specifically to push cell diagonals down to 2. The checkerboard
-confirmed real diagonal variation (522 of 693 interior cells at
-diagonal 2 instead of 4, on a 40×40 grid) - and still showed almost no
-sweep-count improvement, sometimes a sweep or two *worse*. A diagonal
-preconditioner corrects each cell's own local scale; it has no
-visibility into the domain's overall shape. What actually slows
-Conjugate Gradient down on the checkerboard is the maze-like geometry
-itself - interior cells threaded through a lattice of 1-cell
-corridors - a global property no purely local preconditioner can
-reach. See `docs/conjugate_gradient_study.md` for the full data and
-the reasoning behind it.
-
 ---
 
-# Hyperbolic PDEs
-
-NumKit implements an upwind finite-difference solver for the 1D advection equation:
-
-u_t + c u_x = 0
-
-Features include:
-
-- Periodic boundary conditions
-- Courant-number calculation
-- CFL stability analysis
-- Exact-solution comparison
-- Numerical-diffusion experiments
-
-For the exact solution,
-
-u(x, t) = u₀(x − ct)
-
-the numerical solution can be compared directly against the translated initial condition.
-
-The repository also includes deliberate CFL-violation experiments to demonstrate instability when the stability condition is exceeded.
-
----
-
-# Parabolic PDEs
-
-NumKit implements Forward-Time Centered-Space (FTCS) for the 1D diffusion equation:
-
-u_t = α u_xx
-
-with stability parameter:
-
-r = α Δt / Δx²
-
-and explicit stability condition:
-
-r ≤ 1/2
-
-Features include:
-
-- FTCS diffusion solver
-- Gaussian analytical solution
-- Conservation testing
-- Stability-violation experiments
-- Grid-refinement studies
-- Error analysis
-
-## Diffusion Convergence Study
-
-The convergence experiments hold
-
-r = α Δt / Δx²
-
-constant while refining the spatial grid.
-
-Therefore,
-
-Δt ∝ Δx²
-
-Measured refinement ratios include:
-
-```text
-4.01
-4.00
-4.00
-```
-
-matching the expected second-order behavior.
-
-At the finest resolution, the measured ratio begins to deviate as the number of time steps becomes very large, providing an example of accumulated floating-point error becoming more significant relative to discretization error.
-
-## Black-Scholes
-
-A change of variables reduces the Black-Scholes PDE to the same 1D heat equation the diffusion solver already handles, so `black_scholes.hpp` reuses that FTCS machinery directly instead of implementing a separate solver.
-
-The result is validated against the closed-form Black-Scholes formula for a European call option:
-
-| Measured price | Closed-form price | Relative error |
-|---:|---:|---:|
-| 10.4206 | 10.4506 | 0.29% |
+> **Hyperbolic and parabolic PDEs (1D advection, FTCS diffusion) and the Black-Scholes solver have moved to a separate repo:** [pde-evolution](https://github.com/jyahdi-byte/pde-evolution). NumKit now covers elliptic PDEs only.
 
 ---
 
@@ -501,7 +362,6 @@ Investigate mathematical behavior:
 - Convergence studies
 - Stability-limit experiments
 - SOR parameter sweeps
-- Numerical diffusion
 - CPU scaling
 - CUDA block-size comparisons
 
@@ -557,38 +417,22 @@ numkit/
 ├── include/
 │   ├── grid.hpp
 │   ├── jacobi.hpp
-│   ├── jacobi_mt.hpp
 │   ├── gauss_seidel.hpp
 │   ├── gauss_seidel_rb.hpp
-│   ├── gauss_seidel_rb_mt.hpp
-│   ├── gauss_seidel_rb_kernel.cuh
 │   ├── sor.hpp
 │   ├── sor_rb.hpp
-│   ├── sor_rb_mt.hpp
-│   ├── sor_rb_kernel.cuh
 │   ├── conjugate_gradient.hpp
-│   ├── advection.hpp
-│   ├── diffusion.hpp
 │   └── ...
 │
 ├── cuda/
-│   ├── jacobi_validate.cu
-│   ├── jacobi_tiled_validate.cu
-│   ├── gauss_seidel_rb_validate.cu
-│   ├── sor_rb_validate.cu
+│   ├── jacobi.cu
+│   ├── jacobi_tiled.cu
 │   └── ...
 │
 ├── tests/
 │   ├── test_grid.cpp
 │   ├── test_jacobi.cpp
-│   ├── test_solvers.cpp
-│   ├── test_mt.cpp
-│   ├── test_rb_mt.cpp
-│   ├── test_diffusion.cpp
-│   ├── test_advection.cpp
-│   ├── cg_sweep.cpp
-│   ├── pcg_sweep.cpp
-│   ├── red_black_sweep.cpp
+│   ├── test_convergence.cpp
 │   └── ...
 │
 ├── experiments/
@@ -598,13 +442,9 @@ numkit/
 │   └── cuda/
 │
 ├── docs/
-│   ├── diffusion_study.md
-│   ├── threading_study.md
+│   ├── convergence.md
 │   ├── red_black_study.md
 │   ├── conjugate_gradient_study.md
-│   ├── omega_study.md
-│   ├── validation.md
-│   ├── gpu_speedup_study.md
 │   └── ...
 │
 └── .github/
@@ -691,11 +531,8 @@ The long-term goal is to evolve NumKit from a collection of numerical experiment
 Planned directions include:
 
 - GMRES
-- Per-cell coefficients (varying material properties instead of a fixed
-  4-per-cell stencil) - what the diagonal preconditioner would actually
-  need to show a real advantage on this codebase's problems
-- Wall-clock speedup measurement for the CUDA red-black kernels (only
-  correctness has been validated so far, not timing)
+- Preconditioned Conjugate Gradient (diagonal/Jacobi preconditioner)
+- Threaded and CUDA red-black Gauss-Seidel/SOR
 - More reusable PDE/discretization abstractions
 - 2D and 3D extensions
 - More advanced CUDA implementations

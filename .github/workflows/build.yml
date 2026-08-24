@@ -15,14 +15,8 @@ jobs:
           ./test_mt.exe
           ./test_rb_mt.exe
           ./test_omega_auto.exe
-          ./test_advection.exe
-          ./test_advection_exact.exe
           ./test_grid.exe
           ./test_jacobi.exe
-          ./test_diffusion.exe
-          ./test_diffusion_exact.exe
-          ./diffusion_convergence.exe
-          ./test_black_scholes_exact.exe
 
   cuda-compile-check:
     runs-on: ubuntu-latest
