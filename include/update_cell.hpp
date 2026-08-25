@@ -5,7 +5,7 @@
 #define NUMKIT_HD __host__ __device__
 #else
 #define NUMKIT_HD
-#endif
+#endif 
 
 NUMKIT_HD double update_cell(const double* temps, const double* faces_k, const double* total_ks, const unsigned char* active, int r, int c, int rows, int cols){
     if (active[r * cols + c]){

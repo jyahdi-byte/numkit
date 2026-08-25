@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
 
     int sweeps = sor_solve(g, 1e-6, 50000, 1.5);
     std::cout << sweeps << "\n";
-    write_ppm(g, "heat.ppm");
+    write_ppm_composite(g, "heat.ppm", 0.5);
 
     return 0;
 }

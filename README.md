@@ -1,5 +1,7 @@
 # NumKit
 
+[![build](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
+
 A C++ numerical computing library focused on **finite-difference PDE solvers, numerical verification, convergence analysis, CPU parallelism, and CUDA acceleration**.
 
 NumKit explores the full numerical-computing workflow:
@@ -166,6 +168,18 @@ equation would, but the two streams are visibly distinguishable before
 they blend into one uniform region.
 
 ![Heat diffusing through two slits in an insulated wall](docs/images/heat_slits.png)
+
+A third demo, `apps/heat/main_lens.cpp`, shows off the continuous
+conductivity field: a wide hot base feeds a fan of full-conductivity
+fin channels through an otherwise low-conductivity (`k = 0.15`)
+background, forcing heat to travel mostly along the fins toward a
+cold sink, with a conductivity "bump" placed along one channel for
+contrast.
+
+![Conductivity mask for the lens demo](docs/images/lens_conductivity.png)
+![Initial state before solving](docs/images/lens_before.png)
+![Converged temperature field, hue only](docs/images/lens_after.png)
+![Converged temperature field, composite view — the low-conductivity background darkens, making the fin and bump stand out](docs/images/lens_composite_after.png)
 
 ---
 

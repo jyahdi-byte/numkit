@@ -23,7 +23,7 @@ int main(){
 
     int sweeps = sor_solve(g, 1e-6, 50000, 1.5);
     std::cout << sweeps << "\n";
-    write_ppm(g, "heat_slits.ppm");
+    write_ppm_composite(g, "heat_slits.ppm", 0.5);
 
     return 0;
 }
