@@ -1,8 +1,11 @@
 #ifndef GAUSS_SEIDEL_HPP
 #define GAUSS_SEIDEL_HPP
-#include "grid.hpp"
+
 #include <cmath>
 #include <vector>
+
+#include "grid.hpp"
+#include "update_cell.hpp"
 
 int gauss_seidel_solve(Grid& g, double tol, int max_iter){
     for (int k = 0; k < max_iter; k++){
@@ -11,13 +14,8 @@ int gauss_seidel_solve(Grid& g, double tol, int max_iter){
         for (int i = 1; i < g.getRows() - 1; i++){
             for (int j = 1; j < g.getCols() - 1; j++){
                if (g.getType(i,j) == INTERIOR){
-                    double oldPoint = g.at(i,j);
-                    std::vector<double> components = {g.at(i+1,j), g.at(i-1,j), g.at(i,j+1), g.at(i,j-1)}; 
-                    if (g.getType(i+1,j) == HOLE){components[0] = g.at(i,j);}
-                    if (g.getType(i-1,j) == HOLE){components[1] = g.at(i,j);}
-                    if (g.getType(i,j+1) == HOLE){components[2] = g.at(i,j);}
-                    if (g.getType(i,j-1) == HOLE){components[3] = g.at(i,j);}
-                    g.at(i,j) = (components[0] + components[1] + components[2] + components[3])/4;
+                    double oldPoint = g.at(i,j); 
+                    g.at(i,j) = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, g.getRows(), g.getCols());
                     change = std::abs(g.at(i,j) - oldPoint);
                     if (change >= maxChange){
                         maxChange = change; 

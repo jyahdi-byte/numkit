@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "grid.hpp" 
+#include "update_cell.hpp"
 
 void sweep_rows(const Grid& g, Grid& newg, int r_start, int r_end, double& localMax){
     localMax = 0;
@@ -17,12 +18,7 @@ void sweep_rows(const Grid& g, Grid& newg, int r_start, int r_end, double& local
     for (int i = r_start; i < r_end; i++){
             for (int j = 1; j < g.getCols() - 1; j++){
             if (g.getType(i,j) == INTERIOR){
-                    std::vector<double> components = {g.at(i+1,j), g.at(i-1,j), g.at(i,j+1), g.at(i,j-1)}; 
-                    if (g.getType(i+1,j) == HOLE){components[0] = g.at(i,j);}
-                    if (g.getType(i-1,j) == HOLE){components[1] = g.at(i,j);}
-                    if (g.getType(i,j+1) == HOLE){components[2] = g.at(i,j);}
-                    if (g.getType(i,j-1) == HOLE){components[3] = g.at(i,j);}
-                    newg.at(i,j) = (components[0] + components[1] + components[2] + components[3])/4;
+                    newg.at(i,j) = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, g.getRows(), g.getCols());
                     change = std::abs(newg.at(i,j) - g.at(i,j));
                     if (change >= localMax){
                         localMax = change; 

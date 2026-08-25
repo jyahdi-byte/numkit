@@ -1,9 +1,13 @@
 #ifndef SOR_RB_HPP
 #define SOR_RB_HPP
-#include "grid.hpp"
+
+
 #include <cmath>
 #include <numbers>
 #include <vector>
+
+#include "grid.hpp"
+#include "update_cell.hpp"
 
 
 int sor_rb_solve(Grid& g, double tol, int max_iter, double omega){
@@ -14,12 +18,7 @@ int sor_rb_solve(Grid& g, double tol, int max_iter, double omega){
             for (int j = 1; j < g.getCols() - 1; j++){
                 if (g.getType(i,j) == INTERIOR && (i + j) % 2 == 0){
                     double oldPoint = g.at(i,j);
-                    std::vector<double> components = {g.at(i+1,j), g.at(i-1,j), g.at(i,j+1), g.at(i,j-1)}; 
-                    if (g.getType(i+1,j) == HOLE){components[0] = g.at(i,j);}
-                    if (g.getType(i-1,j) == HOLE){components[1] = g.at(i,j);}
-                    if (g.getType(i,j+1) == HOLE){components[2] = g.at(i,j);}
-                    if (g.getType(i,j-1) == HOLE){components[3] = g.at(i,j);}
-                    double avg = (components[0] + components[1] + components[2] + components[3])/4;
+                    double avg = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, g.getRows(), g.getCols());
                     double delta = omega * (avg - oldPoint);
                     g.at(i,j) = oldPoint + delta;
                     change = std::abs(delta);
@@ -33,12 +32,7 @@ int sor_rb_solve(Grid& g, double tol, int max_iter, double omega){
             for (int j = 1; j < g.getCols() - 1; j++){
                 if (g.getType(i,j) == INTERIOR && (i + j) % 2 == 1){
                     double oldPoint = g.at(i,j);
-                    std::vector<double> components = {g.at(i+1,j), g.at(i-1,j), g.at(i,j+1), g.at(i,j-1)}; 
-                    if (g.getType(i+1,j) == HOLE){components[0] = g.at(i,j);}
-                    if (g.getType(i-1,j) == HOLE){components[1] = g.at(i,j);}
-                    if (g.getType(i,j+1) == HOLE){components[2] = g.at(i,j);}
-                    if (g.getType(i,j-1) == HOLE){components[3] = g.at(i,j);}
-                    double avg = (components[0] + components[1] + components[2] + components[3])/4;
+                    double avg = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, g.getRows(), g.getCols());
                     double delta = omega * (avg - oldPoint);
                     g.at(i,j) = oldPoint + delta;
                     change = std::abs(delta);

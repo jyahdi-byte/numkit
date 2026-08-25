@@ -15,10 +15,10 @@ private:
     std::vector<CellType> cellTypes;
 
     std::vector<double> conductivities;
-    std::vector<std::vector<double>> faces_k;
+    std::vector<double> faces_k; // flat: idx*4 + {0=up,1=down,2=right,3=left}
     std::vector<double> total_ks;
     double epsilon = 1e-9;
-    std::vector<bool> active;
+    std::vector<unsigned char> active; // 0 = false, 1 = true (vector<bool> has no .data())
 
     // --- conductivity-field internals ---
 
@@ -32,10 +32,10 @@ private:
         assert(r < rows && r >= 0 && c < cols && c >= 0);
         assert(dr == 0 || dc == 0);
         
-        if (dr == 1 && r + 1 < rows){faces_k[(r + 1) * cols + c][1] = faces_k[r * cols + c][0];}
-        else if (dr == -1 && r - 1 >= 0){faces_k[(r - 1) * cols + c][0] = faces_k[r * cols + c][1];}
-        else if (dc == 1 && c + 1 < cols){faces_k[r * cols + (c + 1)][3] = faces_k[r * cols + c][2];}
-        else if (dc == -1 && c - 1 >= 0){faces_k[r * cols + (c - 1)][2] = faces_k[r * cols + c][3];}
+        if (dr == 1 && r + 1 < rows){faces_k[((r + 1) * cols + c) * 4 + 1] = faces_k[(r * cols + c) * 4 + 0];}
+        else if (dr == -1 && r - 1 >= 0){faces_k[((r - 1) * cols + c) * 4 + 0] = faces_k[(r * cols + c) * 4 + 1];}
+        else if (dc == 1 && c + 1 < cols){faces_k[(r * cols + (c + 1)) * 4 + 3] = faces_k[(r * cols + c) * 4 + 2];}
+        else if (dc == -1 && c - 1 >= 0){faces_k[(r * cols + (c - 1)) * 4 + 2] = faces_k[(r * cols + c) * 4 + 3];}
     }
 
     void initialize_k(){
@@ -51,10 +51,10 @@ private:
                 if (j - 1 < 0){k_left = conductivities[i * cols + j];}
                 else if (k_sum(i, j, i, j - 1) == 0){k_left = 0;} else {k_left = (2 * conductivities[i * cols + j] * conductivities[i * cols + (j - 1)]) / k_sum(i, j, i, j - 1);}
 
-                faces_k[i * cols + j].push_back(k_up);
-                faces_k[i * cols + j].push_back(k_down);
-                faces_k[i * cols + j].push_back(k_right);
-                faces_k[i * cols + j].push_back(k_left);
+                faces_k.push_back(k_up);
+                faces_k.push_back(k_down);
+                faces_k.push_back(k_right);
+                faces_k.push_back(k_left);
                 total_ks.push_back(k_up + k_down + k_right + k_left);
             }
         }
@@ -63,16 +63,16 @@ private:
     void initialize_active(){
         for (int i = 0; i < rows; i++){
             for (int j = 0; j < cols; j++){
-                if (total_ks[i * cols + j] > epsilon){active.push_back(true);}
-                else{active.push_back(false);}
+                if (total_ks[i * cols + j] > epsilon){active.push_back(1);}
+                else{active.push_back(0);}
             }
         }
     }
 
     void update_active(int r, int c){
         assert(r < rows && r >= 0 && c < cols && c >= 0);
-        if (total_ks[r * cols + c] > epsilon){active[r * cols + c] = true;}
-        else{active[r * cols + c] = false;}
+        if (total_ks[r * cols + c] > epsilon){active[r * cols + c] = 1;}
+        else{active[r * cols + c] = 0;}
     }
 
     void update_k(int r, int c){
@@ -87,10 +87,10 @@ private:
         if (c - 1 < 0){k_left = conductivities[r * cols + c];}
         else if (k_sum(r, c, r, c - 1) == 0){k_left = 0;} else {k_left = (2 * conductivities[r * cols + c] * conductivities[r * cols + (c - 1)]) / k_sum(r, c, r, c - 1);}
 
-        faces_k[r * cols + c][0] = k_up;
-        faces_k[r * cols + c][1] = k_down;
-        faces_k[r * cols + c][2] = k_right;
-        faces_k[r * cols + c][3] = k_left;
+        faces_k[(r * cols + c) * 4 + 0] = k_up;
+        faces_k[(r * cols + c) * 4 + 1] = k_down;
+        faces_k[(r * cols + c) * 4 + 2] = k_right;
+        faces_k[(r * cols + c) * 4 + 3] = k_left;
 
         update_k_component(r, c, 1, 0);
         update_k_component(r, c, -1, 0);
@@ -101,19 +101,19 @@ private:
         update_active(r, c);
 
         if (r + 1 < rows){
-            total_ks[(r + 1) * cols + c] = faces_k[(r + 1) * cols + c][0] + faces_k[(r + 1) * cols + c][1] + faces_k[(r + 1) * cols + c][2] + faces_k[(r + 1) * cols + c][3];
+            total_ks[(r + 1) * cols + c] = faces_k[((r + 1) * cols + c) * 4 + 0] + faces_k[((r + 1) * cols + c) * 4 + 1] + faces_k[((r + 1) * cols + c) * 4 + 2] + faces_k[((r + 1) * cols + c) * 4 + 3];
             update_active(r + 1, c);
         }
         if (r - 1 >= 0){
-            total_ks[(r - 1) * cols + c] = faces_k[(r - 1) * cols + c][0] + faces_k[(r - 1) * cols + c][1] + faces_k[(r - 1) * cols + c][2] + faces_k[(r - 1) * cols + c][3];
+            total_ks[(r - 1) * cols + c] = faces_k[((r - 1) * cols + c) * 4 + 0] + faces_k[((r - 1) * cols + c) * 4 + 1] + faces_k[((r - 1) * cols + c) * 4 + 2] + faces_k[((r - 1) * cols + c) * 4 + 3];
             update_active(r - 1, c);
         }
         if (c + 1 < cols){
-            total_ks[r * cols + (c + 1)] = faces_k[r * cols + (c + 1)][0] + faces_k[r * cols + (c + 1)][1] + faces_k[r * cols + (c + 1)][2] + faces_k[r * cols + (c + 1)][3];
+            total_ks[r * cols + (c + 1)] = faces_k[(r * cols + (c + 1)) * 4 + 0] + faces_k[(r * cols + (c + 1)) * 4 + 1] + faces_k[(r * cols + (c + 1)) * 4 + 2] + faces_k[(r * cols + (c + 1)) * 4 + 3];
             update_active(r, c + 1);
         }
         if (c - 1 >= 0){
-            total_ks[r * cols + (c - 1)] = faces_k[r * cols + (c - 1)][0] + faces_k[r * cols + (c - 1)][1] + faces_k[r * cols + (c - 1)][2] + faces_k[r * cols + (c - 1)][3];
+            total_ks[r * cols + (c - 1)] = faces_k[(r * cols + (c - 1)) * 4 + 0] + faces_k[(r * cols + (c - 1)) * 4 + 1] + faces_k[(r * cols + (c - 1)) * 4 + 2] + faces_k[(r * cols + (c - 1)) * 4 + 3];
             update_active(r, c - 1);
         }
 
@@ -133,7 +133,6 @@ public:
                 if (i == 0 || i == r - 1 || j == 0 || j == c - 1){cellTypes.push_back(FIXED);}
                 else{cellTypes.push_back(INTERIOR);}
                 conductivities.push_back(1); 
-                faces_k.push_back(std::vector<double>());
             }
         }
         initialize_k(); initialize_active();
@@ -157,6 +156,7 @@ public:
     }
 
     double* getTempsPtr(){return temps.data();}
+    const double* getTempsPtr() const {return temps.data();}
 
     // --- cell type ---
 
@@ -194,9 +194,10 @@ public:
         return conductivities[r * cols + c];
     }
 
-    std::vector<double> getFacesK(int r, int c) const {
+    double getFacesK(int r, int c, int dir) const {
         assert(r < rows && r >= 0 && c < cols && c >= 0);
-        return faces_k[r * cols + c];
+        assert(dir >= 0 && dir < 4);
+        return faces_k[(r * cols + c) * 4 + dir];
     }
 
     double getTotalK(int r, int c) const {
@@ -206,8 +207,12 @@ public:
 
     bool getActive(int r, int c) const {
         assert(r < rows && r >= 0 && c < cols && c >= 0);
-        return active[r * cols + c];
+        return active[r * cols + c] != 0;
     }
+
+    const double* getFacesKPtr() const {return faces_k.data();}
+    const double* getTotalKPtr() const {return total_ks.data();}
+    const unsigned char* getActivePtr() const {return active.data();}
 
     // --- masking ---
 
