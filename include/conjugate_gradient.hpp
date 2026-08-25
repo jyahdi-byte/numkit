@@ -36,15 +36,6 @@ double maxDifference(std::vector<double> a, std::vector<double> b){
     return maxChange;
 }
 
-int diag(const Grid& g, int i, int j){
-    int holes = 0;
-    if (g.getType(i+1,j) == HOLE){holes++;}
-    if (g.getType(i-1,j) == HOLE){holes++;}
-    if (g.getType(i,j+1) == HOLE){holes++;}
-    if (g.getType(i,j-1) == HOLE){holes++;}
-    return 4 - holes;
-}
-
 std::vector<double> compute_b(const Grid& g) {
     int rows = g.getRows();
     int cols = g.getCols();
@@ -53,17 +44,17 @@ std::vector<double> compute_b(const Grid& g) {
     for (int i = 1; i < rows - 1; i++) {
         for (int j = 1; j < cols - 1; j++) {
             if (g.getType(i, j) == INTERIOR) {
-                double sum = 0.0;
-                if (g.getType(i+1, j) == FIXED) sum += g.at(i+1, j);
-                if (g.getType(i-1, j) == FIXED) sum += g.at(i-1, j);
-                if (g.getType(i, j+1) == FIXED) sum += g.at(i, j+1);
-                if (g.getType(i, j-1) == FIXED) sum += g.at(i, j-1);
+                double sum = 0;
+                if (g.getType(i + 1, j) == FIXED) {sum += g.getFacesK(i, j, 0) * g.at(i + 1, j);}
+                if (g.getType(i - 1, j) == FIXED) {sum += g.getFacesK(i, j, 1) * g.at(i - 1, j);}
+                if (g.getType(i, j + 1) == FIXED) {sum += g.getFacesK(i, j, 2) * g.at(i, j + 1);}
+                if (g.getType(i, j - 1) == FIXED) {sum += g.getFacesK(i, j, 3) * g.at(i, j - 1);}
                 b[i * cols + j] = sum;
             }
         }
     }
     return b;
-}
+} 
 
 std::vector<double> apply_A(const std::vector<double>& p, int rows, int cols, const Grid& A){
     std::vector<double> result(rows * cols, 0.0);
@@ -71,13 +62,9 @@ std::vector<double> apply_A(const std::vector<double>& p, int rows, int cols, co
         for (int j = 1; j < cols - 1; j++) {
             if (A.getType(i, j) == INTERIOR) {
                 std::vector<double> components = {p[(i+1) * cols + j], p[(i-1) * cols + j], p[i * cols + j + 1], p[i * cols + j - 1]}; 
-                if (A.getType(i+1,j) == HOLE){components[0] = p[i * cols + j];}
-                if (A.getType(i-1,j) == HOLE){components[1] = p[i * cols + j];}
-                if (A.getType(i,j+1) == HOLE){components[2] = p[i * cols + j];}
-                if (A.getType(i,j-1) == HOLE){components[3] = p[i * cols + j];}
-                double sum = (components[0] + components[1] + components[2] + components[3]);
+                double sum = (A.getFacesK(i, j, 0) * components[0] + A.getFacesK(i, j, 1) * components[1] + A.getFacesK(i, j, 2) * components[2] + A.getFacesK(i, j, 3) * components[3]);
                 double center = p[i * cols + j];
-                result[i * cols + j] = 4 * center - sum;
+                result[i * cols + j] = A.getTotalK(i, j) * center - sum;
             }
         }
     }
@@ -138,7 +125,7 @@ int pcg_solve(Grid& A, double tol, int iterations){
     for (int i = 1; i < A.getRows() - 1; i++){
         for (int j = 1; j < A.getCols() - 1; j++){
             if (A.getType(i, j) == INTERIOR){
-                z[i * A.getCols() + j] /= diag(A, i, j);
+                z[i * A.getCols() + j] /= A.getTotalK(i, j);
             }
         } 
     }
@@ -164,7 +151,7 @@ int pcg_solve(Grid& A, double tol, int iterations){
         for (int i = 1; i < A.getRows() - 1; i++){
             for (int j = 1; j < A.getCols() - 1; j++){
                 if (A.getType(i, j) == INTERIOR){
-                    z_new[i * A.getCols() + j] /= diag(A, i, j);
+                    z_new[i * A.getCols() + j] /= A.getTotalK(i, j);
                 }
             }
         }
