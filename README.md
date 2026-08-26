@@ -1,10 +1,8 @@
-# NumKit
+# NumKit  [![CI](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
 
 **By Jonas Yahdi**  
 Applied Mathematics / Computational Mathematics & Computer Science  
 Santa Clara University
-
-[![CI](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
 
 **NumKit is a C++ numerical-computing project for solving and studying elliptic PDEs, with an emphasis on numerical verification, parallelism, and performance engineering.**
 
