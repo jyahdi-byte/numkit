@@ -1,5 +1,9 @@
 # NumKit
 
+**By Jonas Yahdi**  
+Applied Mathematics / Computational Mathematics & Computer Science  
+Santa Clara University
+
 [![CI](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
 
 **NumKit is a C++ numerical-computing project for solving and studying elliptic PDEs, with an emphasis on numerical verification, parallelism, and performance engineering.**
@@ -479,3 +483,16 @@ The most useful deep dives are:
 - [`docs/conjugate_gradient_study.md`](docs/conjugate_gradient_study.md) — CG and preconditioning studies
 - [`docs/gpu_speedup_study.md`](docs/gpu_speedup_study.md) — CPU vs. CUDA performance analysis
 
+## Author
+
+**Jonas Yahdi**  
+Applied Mathematics / Computational Mathematics & Computer Science  
+Santa Clara University
+
+GitHub: [jyahdi-byte](https://github.com/jyahdi-byte)  
+LinkedIn: [Jonas Yahdi](https://www.linkedin.com/in/jonas-yahdi-b00a1a226/)  
+Email: [jyahdi@scu.edu](mailto:jyahdi@scu.edu) · [jyahdi@gmail.com](mailto:jyahdi@gmail.com)
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
