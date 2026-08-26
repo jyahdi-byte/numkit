@@ -92,9 +92,9 @@ A numerical code is only useful if its results can be trusted independently.
 ### Manufactured-solution convergence
 The solvers are checked against the exact solution
 
-\[
+$$
 T(x,y) = \sin(\pi x)\sinh(\pi y)
-\]
+$$
 
 Grid-refinement study (expected second-order → factor of ≈4):
 
