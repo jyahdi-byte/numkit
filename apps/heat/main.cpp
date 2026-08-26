@@ -11,6 +11,7 @@ int main(int argc, char* argv[]){
     for (int j = 0; j < g.getCols(); j++){
         g.at(0,j) = 100.0;
     }
+    Grid g1 = g;
 
     bool obstacle = false;
     for (int a = 1; a < argc; a++){
@@ -26,7 +27,10 @@ int main(int argc, char* argv[]){
 
     int sweeps = sor_solve(g, 1e-6, 50000, 1.5);
     std::cout << sweeps << "\n";
-    write_ppm_composite(g, "heat.ppm", 0.5);
+    write_ppm_hue(g, "heat.ppm");
+
+    sor_solve(g1, 1e-6, 50000);
+    write_ppm_hue(g1, "heatmap.ppm");
 
     return 0;
 }

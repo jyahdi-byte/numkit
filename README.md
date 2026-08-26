@@ -29,7 +29,7 @@ The project answers two questions that matter in real engineering work:
 
 | Basic steady-state heat flow | With circular insulated obstacle | Narrow openings (slits) |
 |:----------------------------:|:--------------------------------:|:-----------------------:|
-| ![Heat](docs/images/heat.png) | ![Heatmap](docs/images/heatmap.png) | ![Slits](docs/images/heat_slits.png) |
+| ![Heat](docs/images/heatmap.png) | ![Heatmap](docs/images/heat.png) | ![Slits](docs/images/heat_slits.png) |
 
 **Variable-conductivity “lens” demo** (low-conductivity background + high-conductivity fins + smooth conductivity bumps, solved with multithreaded red-black SOR):
 
