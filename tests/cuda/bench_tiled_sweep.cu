@@ -79,8 +79,7 @@ int main(){
     std::cout << "\n";
     std::cout << "Mean of Mean Elapsed Times: " << mean(meanTimes) << "\n";
     std::cout << "Mean of Standard Deviation Elapsed Times: " << dev(devTimes) << "\n";
-    std::cout << "Fastest Block Size: " << min_index * 8 + 8 << " Mean Time: " << min_value 
-                 " Standard Deviation: " << devTimes[min_index] << "\n";
+    std::cout << "Fastest Block Size: " << (min_index * 8 + 8) << " Mean Time: " << min_value << " Standard Deviation: " << devTimes[min_index] << "\n";
     
 
     CUDA_CHECK(cudaFree(d_old));
