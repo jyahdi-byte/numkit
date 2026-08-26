@@ -172,7 +172,7 @@ public:
             update_k(i, j);
         }
         update_active(i, j);
-    }
+    } 
 
     CellType getType(int i, int j) const {
         assert(i >= 0 && i < getRows() && j >= 0 && j < getCols());

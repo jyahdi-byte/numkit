@@ -17,5 +17,5 @@ NUMKIT_HD double update_cell(const double* temps, const double* faces_k, const d
     }
     else{return temps[r * cols + c];}
 }
-
+ 
 #endif

@@ -1,7 +1,7 @@
 #ifndef JACOBI_TILED_KERNEL_CUH
 #define JACOBI_TILED_KERNEL_CUH
 
-__global__ void jacobi_tiled_kernel(double* d_old, double* d_new, int rows, int cols) {
+__global__ void jacobi_tiled_kernel(double* d_old, double* d_new, double* d_faces_k, double* d_total_ks, unsigned char* d_active, int rows, int cols) {
     int tileWidth = blockDim.x + 2;
     extern __shared__ double tile[];
     int i = blockIdx.x * blockDim.x + threadIdx.x + 1;
@@ -17,9 +17,21 @@ __global__ void jacobi_tiled_kernel(double* d_old, double* d_new, int rows, int 
     __syncthreads(); 
 
     if ( i < rows-1 && j < cols-1){
-        d_new[i * cols + j] = (tile[(threadIdx.x+2) * tileWidth + threadIdx.y + 1] + tile[(threadIdx.x) * tileWidth + threadIdx.y + 1] +
-        tile[(threadIdx.x+1) * tileWidth + threadIdx.y+2] + tile[(threadIdx.x+1) * tileWidth + threadIdx.y]) / 4;
+        int idx = i * cols + j;
+        if (d_active[idx]){
+            double k_up    = d_faces_k[idx * 4 + 0];
+            double k_down  = d_faces_k[idx * 4 + 1];
+            double k_right = d_faces_k[idx * 4 + 2];
+            double k_left  = d_faces_k[idx * 4 + 3];
+            double t_up    = tile[(threadIdx.x+2) * tileWidth + threadIdx.y + 1];
+            double t_down  = tile[(threadIdx.x)   * tileWidth + threadIdx.y + 1];
+            double t_right = tile[(threadIdx.x+1) * tileWidth + threadIdx.y + 2];
+            double t_left  = tile[(threadIdx.x+1) * tileWidth + threadIdx.y];
+            d_new[idx] = (k_up*t_up + k_down*t_down + k_right*t_right + k_left*t_left) / d_total_ks[idx];
+        } else {
+            d_new[idx] = d_old[idx];
+        }
     }
 }
 
-#endif 
+#endif

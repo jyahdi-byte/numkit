@@ -1,261 +1,223 @@
 # NumKit
 
-[![build](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
+[![CI](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml/badge.svg)](https://github.com/jyahdi-byte/numkit/actions/workflows/build.yml)
 
-A C++ numerical computing library focused on **finite-difference PDE solvers, numerical verification, convergence analysis, CPU parallelism, and CUDA acceleration**.
+**NumKit is a C++ numerical-computing project for solving and studying elliptic PDEs, with an emphasis on numerical verification, parallelism, and performance engineering.**
 
-NumKit explores the full numerical-computing workflow:
+The project starts with a finite-difference model of steady-state heat flow and follows it all the way through multiple CPU solvers, irregular domains, multithreading, CUDA kernels, correctness validation, convergence studies, and performance measurements.
+
+It is designed to demonstrate the kind of workflow used in scientific computing and computational engineering:
 
 ```text
-Mathematical Model
-        ↓
+Physical / Mathematical Model
+            ↓
 Finite-Difference Discretization
-        ↓
-Numerical Solver
-        ↓
-Analytical / Physical Validation
-        ↓
-Convergence & Stability Analysis
-        ↓
+            ↓
+Iterative Linear Solver
+            ↓
+Independent Verification
+            ↓
+Convergence / Parameter Studies
+            ↓
 CPU Parallelization
-        ↓
-CUDA Acceleration
-        ↓
-Performance Analysis
+            ↓
+CUDA Implementation
+            ↓
+Benchmarking and Optimization
 ```
 
-The goal is not simply to produce a numerical answer, but to understand **why the answer should be trusted and how efficiently it can be computed**.
+The central engineering question is not only **“does it produce an answer?”**, but also **“why should I trust the answer, and what limits its performance?”**
 
 ---
 
-## Highlights
+## Why this project is useful as a portfolio project
 
-- Implemented finite-difference solvers for **elliptic PDEs**
-- Implemented **Jacobi, Gauss-Seidel, and SOR** iterative methods
-- Implemented red-black (checkerboard) ordering for Gauss-Seidel and SOR, removing the data race that blocks naive multithreading
-- Implemented matrix-free **Conjugate Gradient** for elliptic systems, applying the 5-point stencil directly instead of assembling an explicit matrix
-- Validated numerical solutions against analytical solutions
-- Performed grid-refinement and convergence studies
-- Built conservation-based numerical tests
-- Parallelized Jacobi iteration with C++ threads
-- Developed a persistent worker model using `std::barrier`
-- Implemented CUDA Jacobi kernels
-- Optimized CUDA Jacobi with shared-memory tiling
-- Benchmarked CPU, naive CUDA, and tiled CUDA implementations
-- Built automated numerical tests and GitHub Actions CI
-- Investigated numerical error, memory bandwidth, synchronization overhead, and GPU kernel-launch overhead
-- Implemented embedded-boundary domains with Dirichlet and Neumann (insulated) obstacles
+NumKit combines several areas that are often shown separately in internship projects:
+
+- **Numerical methods:** finite differences, elliptic PDEs, iterative methods, convergence and error analysis.
+- **C++ systems work:** C++20, memory layout, reusable headers, assertions, multithreading, synchronization, and benchmarking.
+- **Parallel computing:** Jacobi parallelization, persistent worker threads, `std::barrier`, red-black ordering, and race-free parallel updates.
+- **GPU computing:** CUDA kernels, device/host transfers, shared-memory tiling, block-size experiments, and GPU validation.
+- **Scientific software engineering:** unit-style tests, analytical validation, conservation checks, CI, reproducible studies, and documented experiments.
+
+The repository also contains written studies explaining *why* measured behavior differs from the ideal theoretical model. That makes the project more than a collection of solver implementations.
 
 ---
 
-# Numerical Methods
+## What is implemented
 
-## Elliptic PDEs
+### Elliptic PDE solvers
 
-NumKit solves steady-state elliptic problems such as Laplace's equation:
+NumKit solves steady-state elliptic problems such as Laplace's equation and its variable-conductivity form.
 
-∇²T = 0
+Implemented methods include:
 
-Implemented iterative methods:
+- **Jacobi**
+- **Gauss-Seidel**
+- **Successive Over-Relaxation (SOR)**
+- **Red-black Gauss-Seidel**
+- **Red-black SOR**
+- **Conjugate Gradient (CG)**
+- **Preconditioned Conjugate Gradient (diagonal/Jacobi preconditioner)**
 
-- Jacobi
-- Gauss-Seidel (standard and red-black ordering)
-- Successive Over-Relaxation (SOR) (standard and red-black ordering)
-- Conjugate Gradient (matrix-free)
+The grid is stored densely, but cells carry a type:
 
-### Analytical Validation
+```text
+INTERIOR  → unknown updated by the solver
+FIXED     → prescribed Dirichlet value
+HOLE      → excluded / insulated region
+```
 
-The solver is validated against the manufactured solution:
+The same representation is reused across the CPU solvers and CUDA implementations.
 
-T(x, y) = sin(πx) sinh(πy)
+### Variable conductivity
 
-Grid refinement produces approximately second-order convergence:
+The `Grid` class also supports a spatially varying conductivity field. Face conductivities are computed with a harmonic average, allowing the solver to model materials with different thermal conductivities without changing the overall grid representation.
 
-| Grid Refinement | Error Ratio |
+This is demonstrated by the `main_lens.cpp` application, which combines:
+
+- low-conductivity background material,
+- high-conductivity fin regions,
+- fixed hot and cold regions,
+- smoothly varying conductivity bumps,
+- multithreaded red-black SOR.
+
+### Irregular and embedded domains
+
+The solver supports geometry that is not just a simple rectangular interior.
+
+Examples include:
+
+- circular insulated obstacles,
+- rectangular insulated regions,
+- internal fixed-temperature regions,
+- narrow openings through an insulated wall,
+- spatially varying material properties.
+
+For insulated `HOLE` cells, the implementation uses a ghost-point style reflection: a missing neighbor contributes the center value to the stencil, preserving the four-point update structure while enforcing zero normal flux at steady state.
+
+---
+
+# Numerical verification
+
+A numerical solver is only useful when its output can be checked independently. NumKit therefore treats **verification as a first-class part of the project**.
+
+## Manufactured-solution convergence
+
+The solver is checked against the analytical solution
+
+\[
+T(x,y)=\sin(\pi x)\sinh(\pi y)
+\]
+
+for a compatible boundary-value problem.
+
+A grid-refinement study gives approximately second-order convergence:
+
+| Grid change | Measured error ratio |
 |---|---:|
 | 25 → 50 | 4.17 |
 | 50 → 100 | 4.11 |
 
-For a second-order method, halving the grid spacing should reduce the error by approximately:
+For a second-order finite-difference discretization, halving the grid spacing should reduce the leading discretization error by roughly \(2^2=4\). The measured ratios are consistent with that expectation.
 
-2² = 4
+See [`docs/validation.md`](docs/validation.md) for the validation work and [`docs/omega_study.md`](docs/omega_study.md) for the SOR study.
 
-The measured ratios closely match the theoretical prediction.
+## Solver cross-validation
 
----
+Different algorithms should converge to the same physical solution even though they take different computational paths. The test suite compares solver outputs and checks pointwise agreement, symmetry, boundary behavior, and other invariants.
 
-## SOR Parameter Study
+For one representative test, the measured sweep counts were:
 
-SOR introduces the relaxation parameter:
+| Method | Sweeps |
+|---|---:|
+| Jacobi | 298 |
+| Gauss-Seidel | 154 |
+| SOR (`ω = 1.5`) | 41 |
+| SOR (auto/theoretical `ω`) | 40 |
+| Conjugate Gradient | 28 |
+| Preconditioned CG | 27 |
 
-ω
+The important result is not that one method “wins,” but that the implementations can be compared on the **same problem while independently checking that they reach the same solution**.
 
-NumKit sweeps the relaxation parameter experimentally and measures the iterations required for convergence.
+## Conservation and boundary checks
 
-The measured optimum occurs around:
+The tests also verify properties such as:
 
-ω ≈ 1.50
-
-This is compared against the theoretical estimate:
-
-ω_opt ≈ 2 / (1 + sin(πh))
-
-This provides a direct comparison between numerical-analysis theory and measured computational behavior.
-
----
-
-## Embedded Boundary / Irregular Domains
-
-NumKit extends the elliptic solvers to grids containing holes and embedded
-obstacles, using a per-cell classification layered onto the existing dense
-grid. Each cell is one of three types:
-
-- `INTERIOR` — updated normally by the solver
-- `FIXED` — held at a constant value (Dirichlet), e.g. the outer boundary
-  ring or an embedded object at fixed temperature
-- `HOLE` — excluded from the domain, insulated (Neumann / zero-flux)
-
-### Dirichlet Obstacles
-
-A `FIXED` region behaves like a boundary condition sitting inside the
-domain instead of around its edge. Neighboring interior cells read its
-value directly, and the cell itself is never updated.
-
-### Neumann (Insulated) Obstacles
-
-A `HOLE` models empty or insulated space, where no heat crosses its
-boundary. This can't be implemented by simply excluding the missing
-neighbor from the 4-point average — that changes the iterative update
-rule, not just the steady-state answer.
-
-Instead, NumKit uses a ghost-point reflection. The denominator stays
-fixed at 4, and any neighbor that is a `HOLE` is replaced by the center
-cell's own current value before the average is taken:
-
-T_new(i,j) = (T_up + T_down + T_left + T_right) / 4
-
-**Validation:**
-
-- At steady state, this reduces algebraically to averaging over only the
-  real neighbors — the answer one might guess intuitively, but derived
-  here rather than assumed.
-- Near an insulated boundary, the temperature gradient measurably
-  flattens relative to the ambient gradient elsewhere in the same grid,
-  consistent with zero flux crossing the wall.
-
-Implemented across every elliptic solver: Jacobi, Gauss-Seidel, SOR,
-threaded Jacobi, and the CUDA kernel.
-
-### Geometry Helpers
-
-- `maskRect(i0, j0, i1, j1, type)` — carves a rectangular region
-- `maskCircle(ci, cj, r, type)` — carves a circular region, using
-  (i − ci)² + (j − cj)² ≤ r²
-
-### Demo
-
-`apps/heat/main.cpp` accepts an `--obstacle` flag, placing a circular
-insulated obstacle at the center of the domain. `HOLE` cells render in
-black so the obstacle is visually distinct from the surrounding
-temperature field.
-
-![Heat flow around a circular insulated obstacle](docs/images/heat.png)
-
-A second demo, `apps/heat/main_slits.cpp`, places two narrow gaps in an
-otherwise insulated wall. Heat spreads through each gap and merges
-downstream — diffusion doesn't produce the interference fringes a wave
-equation would, but the two streams are visibly distinguishable before
-they blend into one uniform region.
-
-![Heat diffusing through two slits in an insulated wall](docs/images/heat_slits.png)
-
-A third demo, `apps/heat/main_lens.cpp`, shows off the continuous
-conductivity field: a wide hot base feeds a fan of full-conductivity
-fin channels through an otherwise low-conductivity (`k = 0.15`)
-background, forcing heat to travel mostly along the fins toward a
-cold sink, with a conductivity "bump" placed along one channel for
-contrast.
-
-![Conductivity mask for the lens demo](docs/images/lens_conductivity.png)
-![Initial state before solving](docs/images/lens_before.png)
-![Converged temperature field, hue only](docs/images/lens_after.png)
-![Converged temperature field, composite view — the low-conductivity background darkens, making the fin and bump stand out](docs/images/lens_composite_after.png)
+- fixed cells remain fixed,
+- masked cells behave as intended,
+- symmetry is preserved when the geometry is symmetric,
+- solver outputs agree across implementations,
+- CUDA results match the CPU reference within tight numerical tolerances.
 
 ---
 
-## Red-Black Ordering
+# Algorithmic studies
 
-Gauss-Seidel and SOR update each cell in place, reading a mix of old
-and new neighbor values within the same sweep. That's what makes them
-converge faster than Jacobi, but it also means threading them the way
-Jacobi is threaded introduces a data race: one thread can read a
-neighbor cell while another thread is still writing to it.
+The repository includes focused studies rather than only code.
 
-Red-black (checkerboard) ordering splits each sweep into two passes
-over alternating cells, based on the parity of `i + j`. Within a
-single pass, no cell being updated ever depends on another cell being
-updated in that same pass, which makes each pass safe to split across
-threads.
+### SOR parameter selection
 
-NumKit implements red-black variants of both Gauss-Seidel and SOR and
-validates them against the standard ordering: same converged solution,
-essentially the same sweep count.
+SOR depends on a relaxation parameter \(\omega\). NumKit sweeps \(\omega\) and compares measured convergence against the theoretical optimum for a rectangular grid.
 
-| Method | Sweeps (80×80 grid) |
+This turns a textbook formula into an experimentally testable claim.
+
+### Red-black ordering
+
+Standard Gauss-Seidel and SOR perform in-place updates, which makes naive parallelization unsafe because neighboring cells can be read while they are being written.
+
+NumKit uses **red-black ordering**:
+
+```text
+R B R B R
+B R B R B
+R B R B R
+B R B R B
+```
+
+All cells of one color can be updated before advancing to the other color. This creates a synchronization-friendly update pattern suitable for both CPU threads and CUDA kernels.
+
+A representative 80×80 comparison:
+
+| Method | Sweeps |
 |---|---:|
 | Gauss-Seidel | 11,346 |
-| Gauss-Seidel, red-black | 11,365 |
+| Red-black Gauss-Seidel | 11,365 |
 | SOR | 323 |
-| SOR, red-black | 321 |
+| Red-black SOR | 321 |
 
-The reordering costs almost nothing in convergence speed. Its real
-value is what it unlocks: a race-free update pattern the plain
-in-place version can't offer, and the foundation for a threaded and
-CUDA Gauss-Seidel/SOR implementation. See `docs/red_black_study.md`
-for the full grid-size sweep.
+The near-identical convergence counts show why red-black ordering is useful: it changes the update schedule enough to enable parallel execution without materially changing convergence on this test.
 
-## Conjugate Gradient
+See [`docs/red_black_study.md`](docs/red_black_study.md).
 
-Jacobi, Gauss-Seidel, and SOR are all fixed-point methods: repeat an
-update rule and hope it converges. Conjugate Gradient instead builds
-up the solution using a sequence of A-orthogonal search directions,
-which for an n-unknown system reaches the exact answer in at most n
-steps.
+### Conjugate Gradient scaling
 
-NumKit's implementation is matrix-free: instead of assembling the
-coefficient matrix A, it applies the same 5-point stencil the other
-solvers already use directly to a search-direction vector, extended
-with the same FIXED/HOLE handling used elsewhere in the codebase.
+The CG implementation is **matrix-free**. Instead of explicitly assembling a large sparse matrix, it applies the discretized stencil directly to vectors.
 
-Measured against Gauss-Seidel and SOR at its theoretical-optimal ω:
+On the study grid, doubling the problem dimension produced approximately:
 
-| Grid Size | Gauss-Seidel | SOR | Conjugate Gradient |
+| Grid size | Gauss-Seidel | SOR | CG |
 |---:|---:|---:|---:|
 | 10 | 179 | 39 | 24 |
 | 20 | 756 | 80 | 60 |
 | 40 | 2,977 | 161 | 124 |
 | 80 | 11,346 | 323 | 252 |
 
-Gauss-Seidel scales like O(N²) as the grid grows; SOR and Conjugate
-Gradient both scale closer to O(N). Conjugate Gradient outperforms
-even the tuned SOR baseline at every grid size tested, without needing
-an ω parameter at all - a real advantage on irregular domains, where
-SOR's closed-form optimal ω doesn't exist. See
-`docs/conjugate_gradient_study.md` for the full comparison.
+The sweep-growth trends match the qualitative behavior expected from the methods, while also showing why CG can be attractive when an easily tuned SOR parameter is unavailable.
+
+The repository also contains a study of diagonal preconditioning on irregular domains. In the included geometries, the simple diagonal preconditioner produced little or no improvement at larger sizes. That result is documented rather than hidden because negative or inconclusive experimental results are still useful numerical evidence.
+
+See [`docs/conjugate_gradient_study.md`](docs/conjugate_gradient_study.md).
 
 ---
 
-> **Hyperbolic and parabolic PDEs (1D advection, FTCS diffusion) and the Black-Scholes solver have moved to a separate repo:** [pde-evolution](https://github.com/jyahdi-byte/pde-evolution). NumKit now covers elliptic PDEs only.
+# CPU parallelization
 
----
+Jacobi is naturally parallel because every update reads only the previous iteration. NumKit first implements a straightforward threaded version and then a **persistent worker model** using `std::barrier` to reduce repeated thread-management overhead.
 
-# CPU Parallelization
+The project also extends red-black Gauss-Seidel and SOR to threaded execution. The synchronization structure follows directly from the numerical dependency graph: one color is completed before the other begins.
 
-Jacobi iteration is naturally parallel because each grid point in a sweep depends only on values from the previous iteration.
-
-NumKit includes a multithreaded implementation using C++ threads.
-
-Example benchmark:
+A benchmark study showed an important practical lesson: increasing the thread count does not guarantee linear speedup.
 
 | Threads | Runtime | Speedup |
 |---:|---:|---:|
@@ -264,336 +226,256 @@ Example benchmark:
 | 4 | 110 s | 1.38× |
 | 8 | 107.8 s | 1.41× |
 
-The results demonstrate that increasing thread count does not automatically produce proportional speedup.
+The study attributes the weak scaling to factors such as memory bandwidth, synchronization, thread-management overhead, and hardware limits rather than assuming that more threads must be faster.
 
-The project investigates:
-
-- Memory-bandwidth limitations
-- Thread-management overhead
-- Physical vs. logical CPU cores
-- Synchronization costs
-
-The implementation was subsequently redesigned around a persistent worker model using `std::barrier` to reduce repeated thread-creation overhead.
-
-The important result was not simply the speedup number, but using the benchmark to identify a performance bottleneck and guide an implementation change.
+See [`docs/threading_study.md`](docs/threading_study.md).
 
 ---
 
-# CUDA Acceleration
+# CUDA acceleration
 
-The GPU implementation progressed through several stages:
+The GPU implementation was developed incrementally:
 
 ```text
-CPU Jacobi
-    ↓
-Naive CUDA Kernel
-    ↓
-Correctness Validation
-    ↓
-Shared-Memory Tiling
-    ↓
-Block-Size Experiments
-    ↓
-Performance Benchmarking
+CPU reference implementation
+          ↓
+Naive CUDA kernel
+          ↓
+CPU/GPU correctness validation
+          ↓
+Shared-memory tiled kernel
+          ↓
+Block-size sweep
+          ↓
+Benchmark and analysis
 ```
 
-## Shared-Memory Tiling
+### Shared-memory Jacobi
 
-The tiled CUDA implementation loads local grid regions and halo values into shared memory.
+The tiled Jacobi kernel loads a local grid tile and halo cells into CUDA shared memory so neighboring values can be reused without repeatedly reading the same data from global memory.
 
-This reduces repeated global-memory accesses when neighboring values are reused by multiple threads.
+The project includes:
 
-The GPU implementation is validated against the CPU solver before performance comparisons.
+- naive Jacobi CUDA kernel,
+- shared-memory tiled Jacobi kernel,
+- CUDA implementations of red-black Gauss-Seidel and SOR,
+- GPU/CPU correctness checks,
+- block-size experiments,
+- fixed-work throughput benchmarks.
 
-## CPU vs. CUDA
+### Representative GPU benchmark
 
-Example benchmark:
+A documented 100×100 fixed-work benchmark on a Tesla T4 produced:
 
-| Implementation | Runtime |
-|---|---:|
-| CPU | 113.09 ms |
-| CUDA — Naive | 93.69 ms |
-| CUDA — Shared Memory | **85.48 ms** |
+| Implementation | Mean time | Speedup vs. CPU |
+|---|---:|---:|
+| CPU, single thread | 113.09 ms | 1.00× |
+| CUDA, naive | 93.69 ms | 1.21× |
+| CUDA, tiled | **85.48 ms** | **1.32×** |
 
-The tiled CUDA implementation achieves approximately:
+The modest speedup is an intentional part of the analysis. Jacobi is memory-dependent, the problem is relatively small, and kernel-launch overhead matters. The study therefore focuses on understanding the bottleneck instead of reporting a GPU speedup without context.
 
-1.32×
-
-the CPU performance for this workload.
-
-The modest GPU speedup is itself informative. Jacobi iteration is memory-dependent, the benchmark uses a relatively small problem size, and repeated kernel launches introduce overhead.
-
-The project therefore treats GPU benchmarking as a performance investigation rather than simply trying to maximize the reported speedup.
+See [`docs/gpu_speedup_study.md`](docs/gpu_speedup_study.md).
 
 ---
 
-# CUDA Debugging and Validation
+# Debugging and validation of parallel code
 
-During development, the tiled CUDA implementation contained a halo-loading bug for ragged block sizes.
+The repository includes CUDA validation programs that compare GPU results against the CPU reference solution with tight tolerances.
 
-The original implementation happened to pass a correctness check for one tested configuration.
-
-Additional testing exposed the issue, after which the kernel was corrected and revalidated.
-
-This reinforced a central development principle:
+This caught a halo-loading bug in the tiled Jacobi kernel for ragged block sizes. The important part of the workflow was:
 
 ```text
-Implementation
-      ↓
-Validation
-      ↓
-Unexpected Behavior
-      ↓
-Bug Identification
-      ↓
-Correction
-      ↓
-Revalidation
+Implement
+   ↓
+Validate against reference
+   ↓
+Find a failing / suspicious case
+   ↓
+Fix kernel
+   ↓
+Re-run validation
 ```
 
-Numerical software should not be trusted simply because its output looks plausible.
+That workflow is especially important for numerical and parallel programs because a kernel can produce visually plausible output while still containing a race, indexing error, or boundary bug.
 
 ---
 
-# Verification
+# Build and run
 
-NumKit separates **unit tests, numerical experiments, and performance benchmarks**.
+## Requirements
 
-### Unit Tests
+### CPU
 
-Test individual components and expected behavior:
+- Linux/macOS/WSL or another environment with a modern GNU C++ toolchain
+- **C++20**
+- `make`
 
-- Grid indexing
-- Solver outputs
-- Exact solutions
-- Conservation
-- Boundary behavior
+### GPU work
 
-### Numerical Experiments
+- NVIDIA GPU for execution
+- CUDA toolkit / `nvcc`
 
-Investigate mathematical behavior:
+The repository's CI uses CUDA Toolkit 12.4 to **compile-check** the CUDA targets. GitHub-hosted runners used by the workflow do not provide an NVIDIA GPU, so the CUDA CI job verifies compilation rather than running GPU kernels.
 
-- Convergence studies
-- Stability-limit experiments
-- SOR parameter sweeps
-- CPU scaling
-- CUDA block-size comparisons
+## Build the CPU project
 
-### Benchmarks
+```bash
+make all
+```
 
-Measure computational performance:
+This builds the main solver tests, numerical studies, heat-flow demo, and multithreaded targets.
 
-- Single-thread vs. multithreaded CPU execution
-- Naive vs. tiled CUDA
-- Different CUDA block sizes
-- Synchronization and memory effects
+Run a few core correctness checks:
 
-This separation makes it possible to distinguish:
+```bash
+./test_solvers.exe
+./test_grid.exe
+./test_jacobi.exe
+./test_omega_auto.exe
+```
 
-**"Is the algorithm correct?"**
+Some benchmark-oriented and multithreaded programs intentionally perform much larger workloads and can take substantially longer.
 
-from
+## Run the heat demo
 
-**"How does the algorithm behave numerically?"**
+Basic heat-flow example:
 
-and
+```bash
+./heat.exe
+```
 
-**"How efficiently is it implemented?"**
+With a circular insulated obstacle:
+
+```bash
+# after building heat.exe
+./heat.exe --obstacle
+```
+
+The program writes a PPM image of the converged temperature field.
+
+Other applications are in [`apps/heat/`](apps/heat/).
+
+## CUDA targets
+
+Examples:
+
+```bash
+make cuda-test
+make jacobi-validate
+make jacobi-tiled-validate
+make gauss-seidel-rb-validate
+make sor-rb-validate
+make bench-gpu
+make bench-tiled-sweep
+```
+
+These targets assume a working CUDA installation and NVIDIA GPU for execution.
 
 ---
 
-# Testing and CI
-
-NumKit uses C++ assertions and automated tests to verify numerical behavior.
-
-Example:
-
-```cpp
-assert(std::abs(u.at(i) - 1) < 1e-9);
-```
-
-Conservation checks include:
-
-```cpp
-assert(std::abs(sum_after - sum_before) < 1e-9);
-```
-
-GitHub Actions automatically builds and runs tests on repository changes.
-
-The objective is to make numerical regressions fail automatically rather than relying only on manually inspected output.
-
----
-
-# Repository Structure
+# Repository structure
 
 ```text
 numkit/
-├── include/
-│   ├── grid.hpp
-│   ├── jacobi.hpp
-│   ├── gauss_seidel.hpp
-│   ├── gauss_seidel_rb.hpp
-│   ├── sor.hpp
-│   ├── sor_rb.hpp
-│   ├── conjugate_gradient.hpp
-│   └── ...
+├── include/                  # Core numerical library headers
+│   ├── grid.hpp              # Grid, geometry, cell types, conductivity field
+│   ├── jacobi.hpp            # Jacobi solver
+│   ├── gauss_seidel.hpp      # Gauss-Seidel solver
+│   ├── sor.hpp               # SOR solver
+│   ├── *_rb.hpp              # Red-black variants
+│   ├── *_mt.hpp              # Multithreaded variants
+│   ├── conjugate_gradient.hpp # CG / diagonal-PCG
+│   ├── *_kernel.cuh          # CUDA kernels
+│   └── ppm.hpp               # Output/visualization helpers
 │
-├── cuda/
-│   ├── jacobi.cu
-│   ├── jacobi_tiled.cu
-│   └── ...
+├── apps/
+│   └── heat/                 # Demonstration applications
 │
-├── tests/
-│   ├── test_grid.cpp
-│   ├── test_jacobi.cpp
-│   ├── test_convergence.cpp
-│   └── ...
+├── tests/                    # Correctness tests, sweeps, and benchmarks
+│   └── cuda/                 # CUDA validation / benchmark programs
 │
-├── experiments/
-│   ├── convergence/
-│   ├── stability/
-│   ├── cpu/
-│   └── cuda/
-│
-├── docs/
-│   ├── convergence.md
+├── docs/                     # Numerical studies and analysis
+│   ├── validation.md
+│   ├── omega_study.md
 │   ├── red_black_study.md
+│   ├── threading_study.md
 │   ├── conjugate_gradient_study.md
-│   └── ...
+│   └── gpu_speedup_study.md
 │
-└── .github/
-    └── workflows/
+├── .github/workflows/
+│   └── build.yml             # CPU test CI + CUDA compile checks
+│
+├── Makefile
+└── README.md
 ```
 
 ---
 
-# Technical Stack
+# Technical stack
 
-### Languages
-
-- C++
-- CUDA
-- Python for supporting analysis and visualization where applicable
-
-### Numerical Computing
-
-- Finite-difference methods
-- Iterative linear solvers
-- PDE discretization
-- Stability analysis
-- Convergence analysis
-- Numerical error analysis
-
-### Parallel Computing
-
-- C++ threads
-- `std::barrier`
-- CUDA
-- CUDA shared memory
-- GPU kernel optimization
-
-### Development
-
-- Git
-- GitHub
-- GitHub Actions
-- Automated testing
-- Performance benchmarking
+| Area | Technologies |
+|---|---|
+| Language | C++20 |
+| GPU | CUDA / `nvcc` |
+| Numerical methods | Finite differences, iterative solvers, CG, relaxation methods |
+| PDEs | Elliptic / steady-state diffusion and heat conduction |
+| Parallelism | `std::thread`, `std::barrier`, red-black ordering, CUDA |
+| GPU optimization | Shared memory, tiling, block-size experiments |
+| Validation | Assertions, manufactured solutions, cross-solver checks, CPU/GPU comparison |
+| Performance | Fixed-work benchmarks, speedup studies, runtime variance analysis |
+| Tooling | Make, GitHub Actions |
 
 ---
 
-# What This Project Demonstrates
+# What this project demonstrates
 
-NumKit is an exploration of the relationship between **mathematics, numerical algorithms, and computer architecture**.
+NumKit is best viewed as a **scientific-computing implementation and investigation**, not simply a PDE demo.
 
-The project demonstrates the ability to:
+It demonstrates the ability to:
 
-- Translate mathematical equations into computational algorithms
-- Validate numerical implementations against independent analytical results
-- Measure convergence and compare it against theoretical predictions
-- Identify stability constraints and deliberately test their failure modes
-- Parallelize numerical algorithms on CPUs
-- Develop and optimize GPU kernels
-- Use benchmarking to investigate performance bottlenecks
-- Debug numerical and parallel implementations
-- Build automated tests around scientific computations
+- translate a mathematical model into a working numerical algorithm,
+- implement and compare multiple iterative solvers,
+- reason about convergence and asymptotic behavior,
+- validate numerical output against analytical or independent reference results,
+- represent irregular domains and variable material properties,
+- identify data dependencies that constrain parallelism,
+- redesign algorithms for thread-safe CPU execution,
+- move a stencil computation to CUDA,
+- optimize memory access with shared-memory tiling,
+- benchmark implementations and interpret non-ideal scaling,
+- debug numerical and parallel implementations using targeted validation, and
+- document experiments well enough for another engineer to reproduce and critique the results.
 
-The central workflow is:
-
-```text
-Mathematical Theory
-        ↓
-Implementation
-        ↓
-Verification
-        ↓
-Experiment
-        ↓
-Benchmark
-        ↓
-Optimization
-        ↓
-Revalidation
-```
+For internships in **scientific computing, computational engineering, numerical methods, HPC, GPU computing, or performance-oriented C++ development**, the strongest parts of the repository are the combination of numerical correctness, parallel implementation, and measured performance analysis.
 
 ---
 
-# Future Development
+# Current scope and next directions
 
-The long-term goal is to evolve NumKit from a collection of numerical experiments into a more reusable numerical-computing framework.
+NumKit intentionally focuses on **elliptic PDEs**. Time-dependent PDE solvers and a Black-Scholes implementation have been moved to a separate project.
 
-Planned directions include:
+Natural next steps for NumKit include:
 
-- GMRES
-- Preconditioned Conjugate Gradient (diagonal/Jacobi preconditioner)
-- Threaded and CUDA red-black Gauss-Seidel/SOR
-- More reusable PDE/discretization abstractions
-- 2D and 3D extensions
-- More advanced CUDA implementations
-- CUDA event-based benchmarking
-- GPU profiling and occupancy analysis
-- Larger-scale performance studies
-- More comprehensive numerical regression testing
+- stronger automated coverage for edge cases and irregular geometries,
+- broader CUDA execution tests on real GPUs in addition to compile-only CI,
+- better benchmarking controls and repeated-run statistics,
+- sparse-matrix representations for larger problem sizes,
+- stronger preconditioning strategies for irregular or variable-coefficient systems,
+- additional 3D data structures and solvers.
 
-The focus is on making the numerical machinery increasingly **general, verifiable, and performance-aware**.
+These are extensions of the existing architecture rather than a replacement for it.
 
 ---
 
-# Project Philosophy
+## Documentation and studies
 
-> **A numerical algorithm is not finished when it produces an answer. It is finished when the answer has been validated, its error and stability are understood, and its computational behavior has been measured.**
+The most useful deep dives are:
 
-NumKit combines:
+- [`docs/validation.md`](docs/validation.md) — numerical correctness and error checks
+- [`docs/omega_study.md`](docs/omega_study.md) — SOR parameter selection
+- [`docs/red_black_study.md`](docs/red_black_study.md) — race-free red-black ordering
+- [`docs/threading_study.md`](docs/threading_study.md) — CPU scaling and synchronization
+- [`docs/conjugate_gradient_study.md`](docs/conjugate_gradient_study.md) — CG and preconditioning studies
+- [`docs/gpu_speedup_study.md`](docs/gpu_speedup_study.md) — CPU vs. CUDA performance analysis
 
-```text
-Mathematics
-     +
-Numerical Analysis
-     +
-C++ Systems Programming
-     +
-Parallel Computing
-     +
-GPU Computing
-     +
-Experimental Validation
-```
-
-into one continuously evolving project.
-
----
-
-# Author
-
-**Jonas Yahdi**
-
-Applied Mathematics / Computational Mathematics & Computer Science  
-Santa Clara University
-
-GitHub: [jyahdi-byte](https://github.com/jyahdi-byte)
-LinkedIn: [Jonas Yahdi](https://www.linkedin.com/in/jonas-yahdi-b00a1a226/)
-Email: jyahdi@scu.edu (school) · jyahdi@gmail.com (personal)
-
-## License
-
-MIT
