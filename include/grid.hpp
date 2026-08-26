@@ -219,7 +219,7 @@ public:
     void maskRect(int i0, int j0, int i1, int j1, CellType type){
         for (int i = i0; i < i1; i++){
             for (int j = j0; j < j1; j++){
-                setType(i, j, type);
+                if (i >= 0 && i < rows && j >= 0 && j < cols){setType(i, j, type);}
             }
         }
     }
@@ -227,7 +227,9 @@ public:
     void maskCircle(int ci, int cj, int r, CellType type){
         for (int i = ci - r; i < ci + r; i++){
             for (int j = cj - r; j < cj + r; j++){
-                if (std::pow(i - ci, 2) + std::pow(j - cj, 2) <= std::pow(r, 2)){setType(i, j, type);}
+                if (i >= 0 && i < rows && j >= 0 && j < cols){
+                    if (std::pow(i - ci, 2) + std::pow(j - cj, 2) <= std::pow(r, 2)){setType(i, j, type);}
+                }
             }
         }
     }
