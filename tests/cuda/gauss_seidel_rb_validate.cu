@@ -5,6 +5,7 @@
 #include "grid.hpp"
 #include "gauss_seidel_rb.hpp"
 #include "gauss_seidel_rb_kernel.cuh"
+#include "cuda_check.cuh"
 
  
 int main(){
@@ -23,16 +24,16 @@ int main(){
     double* d_total_ks;
     unsigned char* d_active;
 
-    cudaMalloc((void**)&d, rows * cols * sizeof(double));
-    cudaMalloc((void**)&d_types, rows * cols * sizeof(CellType));
-    cudaMalloc((void**)&d_faces_k, 4 * rows * cols * sizeof(double));
-    cudaMalloc((void**)&d_total_ks, rows * cols * sizeof(double));
-    cudaMalloc((void**)&d_active, rows * cols * sizeof(unsigned char));
-    cudaMemcpy(d, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_types, g0.getTypesPtr(), rows * cols * sizeof(CellType), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_faces_k, g0.getFacesKPtr(), 4 * rows * cols * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_total_ks, g0.getTotalKPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_active, g0.getActivePtr(), rows * cols * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMalloc((void**)&d, rows * cols * sizeof(double)));
+    CUDA_CHECK(cudaMalloc((void**)&d_types, rows * cols * sizeof(CellType)));
+    CUDA_CHECK(cudaMalloc((void**)&d_faces_k, 4 * rows * cols * sizeof(double)));
+    CUDA_CHECK(cudaMalloc((void**)&d_total_ks, rows * cols * sizeof(double)));
+    CUDA_CHECK(cudaMalloc((void**)&d_active, rows * cols * sizeof(unsigned char)));
+    CUDA_CHECK(cudaMemcpy(d, g0.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_types, g0.getTypesPtr(), rows * cols * sizeof(CellType), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_faces_k, g0.getFacesKPtr(), 4 * rows * cols * sizeof(double), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_total_ks, g0.getTotalKPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_active, g0.getActivePtr(), rows * cols * sizeof(unsigned char), cudaMemcpyHostToDevice));
 
 
     int interior = (rows - 2) * (cols - 2); 
@@ -40,18 +41,25 @@ int main(){
     int numBlocks = (interior + threadsPerBlock - 1) / threadsPerBlock;
     for (int i = 0; i < sweeps; i++){
         gs_rb_kernel_r<<<numBlocks, threadsPerBlock>>>(d, d_types, d_faces_k, d_total_ks, d_active, rows, cols);
-        cudaDeviceSynchronize();
+        CUDA_CHECK(cudaDeviceSynchronize());
         gs_rb_kernel_b<<<numBlocks, threadsPerBlock>>>(d, d_types, d_faces_k, d_total_ks, d_active, rows, cols);
-        cudaDeviceSynchronize();
+        CUDA_CHECK(cudaDeviceSynchronize());
     }
     double* g1 = (double*)malloc(rows * cols * sizeof(double));
-    cudaMemcpy(g1, d, rows * cols * sizeof(double), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(g1, d, rows * cols * sizeof(double), cudaMemcpyDeviceToHost));
 
     for (int i = 0; i < rows; i++){
         for (int j = 0; j < cols; j++){
             assert(std::abs(g.at(i,j) - g1[i * cols + j]) < 1e-9);
         }
     }
+
+    free(g1);
+    CUDA_CHECK(cudaFree(d));
+    CUDA_CHECK(cudaFree(d_types));
+    CUDA_CHECK(cudaFree(d_faces_k));
+    CUDA_CHECK(cudaFree(d_total_ks));
+    CUDA_CHECK(cudaFree(d_active));
 
     return 0;
 }

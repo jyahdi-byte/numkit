@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cassert>
 #include "grid.hpp"
+#include "cuda_check.cuh"
 
 int main(){
   int rows = 4;
@@ -13,11 +14,11 @@ int main(){
   }
 
   double* d_grid;
-  cudaMalloc((void**)&d_grid, rows * cols * sizeof(double));
-  cudaMemcpy(d_grid, g.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice);
+  CUDA_CHECK(cudaMalloc((void**)&d_grid, rows * cols * sizeof(double)));
+  CUDA_CHECK(cudaMemcpy(d_grid, g.getTempsPtr(), rows * cols * sizeof(double), cudaMemcpyHostToDevice));
 
   double* g1 = (double*)malloc(rows * cols * sizeof(double));
-  cudaMemcpy(g1, d_grid, rows * cols * sizeof(double), cudaMemcpyDeviceToHost);
+  CUDA_CHECK(cudaMemcpy(g1, d_grid, rows * cols * sizeof(double), cudaMemcpyDeviceToHost));
 
   for (int i = 0; i < rows; i++){
     for (int j = 0; j < cols; j++){
@@ -28,6 +29,6 @@ int main(){
   printf("grid_transfer_test: PASS\n");
 
   free(g1);
-  cudaFree(d_grid);
+  CUDA_CHECK(cudaFree(d_grid));
   return 0;
 }
