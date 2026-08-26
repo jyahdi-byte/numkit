@@ -39,36 +39,36 @@ bench_mt.exe: include/grid.hpp include/jacobi.hpp include/jacobi_mt.hpp tests/be
 test_omega_auto.exe: include/grid.hpp include/sor.hpp tests/test_omega_auto.cpp
 	g++ -std=c++20 -Wall -I include tests/test_omega_auto.cpp -o test_omega_auto.exe
 
-cuda-test: include/grid.hpp cuda/grid_transfer_test.cu
-	nvcc -I include cuda/grid_transfer_test.cu -o grid_transfer_test.exe
+cuda-test: include/grid.hpp tests/cuda/grid_transfer_test.cu
+	nvcc -I include tests/cuda/grid_transfer_test.cu -o grid_transfer_test.exe
 	./grid_transfer_test.exe
 
-jacobi-validate: include/grid.hpp include/jacobi.hpp cuda/jacobi_validate.cu
-	nvcc -I include cuda/jacobi_validate.cu -o jacobi_validate.exe
+jacobi-validate: include/grid.hpp include/jacobi.hpp tests/cuda/jacobi_validate.cu
+	nvcc -I include tests/cuda/jacobi_validate.cu -o jacobi_validate.exe
 	./jacobi_validate.exe
 
-gauss-seidel-rb-validate: include/grid.hpp include/gauss_seidel_rb.hpp include/gauss_seidel_rb_kernel.cuh cuda/gauss_seidel_rb_validate.cu
-	nvcc -std=c++20 -I include cuda/gauss_seidel_rb_validate.cu -o gauss_seidel_rb_validate.exe
+gauss-seidel-rb-validate: include/grid.hpp include/gauss_seidel_rb.hpp include/gauss_seidel_rb_kernel.cuh tests/cuda/gauss_seidel_rb_validate.cu
+	nvcc -std=c++20 -I include tests/cuda/gauss_seidel_rb_validate.cu -o gauss_seidel_rb_validate.exe
 	./gauss_seidel_rb_validate.exe
 
-sor-rb-validate: include/grid.hpp include/sor_rb.hpp include/sor_rb_kernel.cuh cuda/sor_rb_validate.cu
-	nvcc -std=c++20 -I include cuda/sor_rb_validate.cu -o sor_rb_validate.exe
+sor-rb-validate: include/grid.hpp include/sor_rb.hpp include/sor_rb_kernel.cuh tests/cuda/sor_rb_validate.cu
+	nvcc -std=c++20 -I include tests/cuda/sor_rb_validate.cu -o sor_rb_validate.exe
 	./sor_rb_validate.exe
 
-bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp cuda/bench_gpu.cu
-	nvcc -I include -O3 -arch=sm_75 cuda/bench_gpu.cu -o bench_gpu.exe
+bench-gpu: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp tests/cuda/bench_gpu.cu
+	nvcc -I include -O3 -arch=sm_75 tests/cuda/bench_gpu.cu -o bench_gpu.exe
 	./bench_gpu.exe
 
-jacobi-tiled-validate: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_tiled_validate.cu
-	nvcc -I include cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe
+jacobi-tiled-validate: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh tests/cuda/jacobi_tiled_validate.cu
+	nvcc -I include tests/cuda/jacobi_tiled_validate.cu -o jacobi_tiled_validate.exe
 	./jacobi_tiled_validate.exe
 
-bench-tiled-sweep: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stats.hpp cuda/bench_tiled_sweep.cu
-	nvcc -I include -O3 -arch=sm_75 cuda/bench_tiled_sweep.cu -o bench_tiled_sweep.exe
+bench-tiled-sweep: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stats.hpp tests/cuda/bench_tiled_sweep.cu
+	nvcc -I include -O3 -arch=sm_75 tests/cuda/bench_tiled_sweep.cu -o bench_tiled_sweep.exe
 	./bench_tiled_sweep.exe
 
-jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh cuda/jacobi_convergence.cu
-	nvcc -std=c++20 -I include cuda/jacobi_convergence.cu -o jacobi_convergence.exe
+jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_kernel.cuh tests/cuda/jacobi_convergence.cu
+	nvcc -std=c++20 -I include tests/cuda/jacobi_convergence.cu -o jacobi_convergence.exe
 	./jacobi_convergence.exe
 
 bench_cpu.exe: include/grid.hpp include/stats.hpp include/n_jacobi.hpp tests/bench_cpu.cpp
