@@ -255,6 +255,67 @@ private:
         return conductivities[d1 * (rows * cols) + r1 * cols + c1] + conductivities[d2 * (rows * cols) + r2 * cols + c2];
     }
 
+    void update_k_component(int r, int c, int d, int dr, int dc, int dd){
+            assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+            assert((dr == 0 || dc == 0) && (dr == 0 || dd == 0) && (dc == 0 || dd == 0));
+
+            if (dr == 1 && r + 1 < rows){faces_k[((d * rows * cols) + (r + 1) * cols + c) * 6 + 1] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 0];}
+            else if (dr == -1 && r - 1 >= 0){faces_k[((d * rows * cols) + (r - 1) * cols + c) * 6 + 0] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 1];}
+            else if (dc == 1 && c + 1 < cols){faces_k[((d * rows * cols) + r * cols + (c + 1)) * 6 + 3] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 2];}
+            else if (dc == -1 && c - 1 >= 0){faces_k[((d * rows * cols) + r * cols + (c - 1)) * 6 + 2] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 3];}
+            else if (dd == 1 && d + 1 < depth){faces_k[(((d + 1) * rows * cols) + r * cols + c) * 6 + 5] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 4];}
+            else if (dd == -1 && d - 1 >= 0){faces_k[(((d - 1) * rows * cols) + r * cols + c) * 6 + 4] = faces_k[((d * rows * cols) + r * cols + c) * 6 + 5];}
+        }  
+        
+        void update_active(int r, int c, int d){
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        if (total_ks[(d * rows * cols) + r * cols + c] > epsilon){active[(d * rows * cols) + r * cols + c] = 1;}
+        else{active[(d * rows * cols) + r * cols + c] = 0;}
+    }
+        
+        void update_k(int r, int c, int d){
+            assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+            int idx = (d * rows * cols) + r * cols + c;
+            double k_up; double k_down; double k_left; double k_right; double k_front; double k_back;
+
+            if (r + 1 == rows){k_up = conductivities[idx];}
+            else if (k_sum(r, c, d, r + 1, c, d) == 0){k_up = 0;} else {k_up = (2 * conductivities[idx] * conductivities[idx + cols]) / k_sum(r, c, d, r + 1, c, d);}
+            if (r - 1 < 0){k_down = conductivities[idx];}
+            else if (k_sum(r, c, d, r - 1, c, d) == 0){k_down = 0;} else {k_down = (2 * conductivities[idx] * conductivities[idx - cols]) / k_sum(r, c, d, r - 1, c, d);}
+            if (c + 1 == cols){k_right = conductivities[idx];}
+            else if (k_sum(r, c, d, r, c + 1, d) == 0){k_right = 0;} else {k_right = (2 * conductivities[idx] * conductivities[idx + 1]) / k_sum(r, c, d, r, c + 1, d);}
+            if (c - 1 < 0){k_left = conductivities[idx];}
+            else if (k_sum(r, c, d, r, c - 1, d) == 0){k_left = 0;} else {k_left = (2 * conductivities[idx] * conductivities[idx - 1]) / k_sum(r, c, d, r, c - 1, d);}
+            if (d + 1 == depth){k_front = conductivities[idx];}
+            else if (k_sum(r, c, d, r, c, d + 1) == 0){k_front = 0;} else {k_front = (2 * conductivities[idx] * conductivities[idx + rows * cols]) / k_sum(r, c, d, r, c, d + 1);}
+            if (d - 1 < 0){k_back = conductivities[idx];}
+            else if (k_sum(r, c, d, r, c, d - 1) == 0){k_back = 0;} else {k_back = (2 * conductivities[idx] * conductivities[idx - rows * cols]) / k_sum(r, c, d, r, c, d - 1);}
+
+            faces_k[idx * 6 + 0] = k_up;
+            faces_k[idx * 6 + 1] = k_down;
+            faces_k[idx * 6 + 2] = k_right;
+            faces_k[idx * 6 + 3] = k_left;
+            faces_k[idx * 6 + 4] = k_front;
+            faces_k[idx * 6 + 5] = k_back;
+
+            update_k_component(r, c, d, 1, 0, 0);
+            update_k_component(r, c, d, -1, 0, 0);
+            update_k_component(r, c, d, 0, 1, 0);
+            update_k_component(r, c, d, 0, -1, 0);
+            update_k_component(r, c, d, 0, 0, 1);
+            update_k_component(r, c, d, 0, 0, -1);
+
+            total_ks[idx] = k_up + k_down + k_right + k_left + k_front + k_back;
+            update_active(r, c, d);
+
+            if (r + 1 < rows){int n = idx + cols; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r + 1, c, d);}
+            if (r - 1 >= 0){int n = idx - cols; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r - 1, c, d);}
+            if (c + 1 < cols){int n = idx + 1; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r, c + 1, d);}
+            if (c - 1 >= 0){int n = idx - 1; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r, c - 1, d);}
+            if (d + 1 < depth){int n = idx + rows*cols; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r, c, d + 1);}
+            if (d - 1 >= 0){int n = idx - rows*cols; total_ks[n] = faces_k[n*6+0]+faces_k[n*6+1]+faces_k[n*6+2]+faces_k[n*6+3]+faces_k[n*6+4]+faces_k[n*6+5]; update_active(r, c, d - 1);}
+        }
+
     void initialize_k(){
         for (int k = 0; k < depth; k++){
             for (int i = 0; i < rows; i++){
@@ -299,6 +360,8 @@ private:
 
 public:
 
+    // --- construction ---
+
     Grid3D(int r, int c, int d){
         assert(r > 0 && c > 0 && d > 0);
         rows = r; cols = c; depth = d;
@@ -313,6 +376,107 @@ public:
             }
         }
         initialize_k(); initialize_active();
+    }
+
+    // --- grid shape ---
+
+    int getRows() const {return rows;}
+    int getCols() const {return cols;}
+    int getDepth() const {return depth;}
+
+    // --- temperature access ---
+
+    double& at(int r, int c, int d){
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        return temps[(d * rows * cols ) + r * cols + c];
+    }
+
+    const double& at(int r, int c, int d) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        return temps[(d * rows * cols ) + r * cols + c];
+    }
+
+    double* getTempsPtr(){return temps.data();}
+    const double* getTempsPtr() const {return temps.data();}
+
+     // --- cell type ---
+
+    void setType(int i, int j, int k, CellType type){
+        assert(i >= 0 && i < rows && j >= 0 && j < cols && k >- 0 && k < depth);
+        cellTypes[(k * rows * cols) + i * cols + j] = type;
+        if (type == HOLE){
+            conductivities[(k * rows * cols) + i * cols + j] = 0;
+            update_k(i, j, k);
+        }
+        else if (type == FIXED){
+            conductivities[(k * rows * cols) + i * cols + j] = 1;
+            update_k(i, j, k);
+        }
+        update_active(i, j, k);
+    } 
+
+    CellType getType(int i, int j, int k) const {
+        assert(i >= 0 && i < rows && j >= 0 && j < cols && k >= 0 && k < depth);
+        return cellTypes[(k * rows * cols) + i * cols + j];
+    }
+
+    CellType* getTypesPtr(){return cellTypes.data();}
+
+    // --- conductivity field access ---
+
+    void setConductivity(int r, int c, int d, double value){
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        conductivities[(d * rows * cols) + r * cols + c] = value;
+        update_k(r, c, d);
+    }
+
+    const double& getConductivity(int r, int c, int d) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        return conductivities[(d * rows * cols) + r * cols + c];
+    }
+
+    double getFacesK(int r, int c, int d, int dir) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        assert(dir >= 0 && dir < 6);
+        return faces_k[((d * rows * cols ) + r * cols + c) * 6 + dir];
+    }
+
+    double getTotalK(int r, int c, int d) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        return total_ks[(d * rows * cols) + r * cols + c];
+    }
+
+    bool getActive(int r, int c, int d) const {
+        assert(r < rows && r >= 0 && c < cols && c >= 0 && d < depth && d >= 0);
+        return active[(d * rows * cols) + r * cols + c] != 0;
+    }
+
+    const double* getFacesKPtr() const {return faces_k.data();}
+    const double* getTotalKPtr() const {return total_ks.data();}
+    const unsigned char* getActivePtr() const {return active.data();}
+
+    // --- masking ---
+
+    void maskRect(int i0, int j0, int d0, int i1, int j1, int d1, CellType type){
+        for (int k = d0; k < d1; k++){
+            for (int i = i0; i < i1; i++){
+                for (int j = j0; j < j1; j++){
+                    if (i >= 0 && i < rows && j >= 0 && j < cols && k >= 0 && k < depth){setType(i, j, k, type);}
+                }
+            }
+        }
+    }
+
+    void maskCircle(int ci, int cj, int ck, int r, CellType type){
+        for (int k = ck - r; k < ck + r; k++){
+            for (int i = ci - r; i < ci + r; i++){
+                for (int j = cj - r; j < cj + r; j++){
+                    if (i >= 0 && i < rows && j >= 0 && j < cols && k >= 0 && k < depth){
+                        if (std::pow(i - ci, 2) + std::pow(j - cj, 2) + std::pow(k - ck, 2) <= std::pow(r, 2)){setType(i, j, k, type);}
+                    }
+                }
+            }
+        }
     }
 };
 
