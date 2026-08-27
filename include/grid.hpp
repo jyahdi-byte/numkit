@@ -15,10 +15,10 @@ private:
     std::vector<CellType> cellTypes;
 
     std::vector<double> conductivities;
-    std::vector<double> faces_k; // flat: idx*4 + {0=up,1=down,2=right,3=left}
+    std::vector<double> faces_k; // idx*4 + {0=up,1=down,2=right,3=left}
     std::vector<double> total_ks;
     double epsilon = 1e-9;
-    std::vector<unsigned char> active; // 0 = false, 1 = true (vector<bool> has no .data())
+    std::vector<unsigned char> active; // 0 = false, 1 = true 
 
     // --- conductivity-field internals ---
 
