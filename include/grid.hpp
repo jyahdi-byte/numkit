@@ -235,4 +235,85 @@ public:
     }
 };
 
+class Grid3D { 
+private:
+    int rows;
+    int cols;
+    int depth;
+    std::vector<double> temps;
+    std::vector<CellType> cellTypes;
+
+    std::vector<double> conductivities;
+    std::vector<double> faces_k; // idx*6 + {0=up,1=down,2=right,3=left,4=front,5=back}
+    std::vector<double> total_ks;
+    double epsilon = 1e-9;
+    std::vector<unsigned char> active; // 0 = false, 1 = true 
+
+    double k_sum(int r1, int c1, int d1, int r2, int c2, int d2){
+        assert(r1 < rows && r1 >= 0 && c1 < cols && c1 >= 0 && d1 >= 0 && d1 < depth);
+        assert(r2 < rows && r2 >= 0 && c2 < cols && c2 >= 0 && d2 >= 0 && d2 < depth);
+        return conductivities[d1 * (rows * cols) + r1 * cols + c1] + conductivities[d2 * (rows * cols) + r2 * cols + c2];
+    }
+
+    void initialize_k(){
+        for (int k = 0; k < depth; k++){
+            for (int i = 0; i < rows; i++){
+                for (int j = 0; j < cols; j++){
+                    double k_up; double k_down; double k_left; double k_right; double k_front; double k_back;
+                    if (i + 1 == rows ){k_up = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i + 1, j, k) == 0){k_up = 0;} else {k_up = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[(k * rows * cols) + (i + 1) * cols + j]) / k_sum(i, j, k, i + 1, j, k);}
+                    if (i - 1 < 0){k_down = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i - 1, j, k) == 0){k_down = 0;} else {k_down = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[(k * rows * cols) + (i - 1) * cols + j]) / k_sum(i, j, k, i - 1, j, k);}
+                    if (j + 1 == cols){k_right = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i, j + 1, k) == 0){k_right = 0;} else {k_right = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[(k * rows * cols) + i * cols + (j + 1)]) / k_sum(i, j, k, i, j + 1, k);}
+                    if (j - 1 < 0){k_left = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i, j - 1, k) == 0){k_left = 0;} else {k_left = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[(k * rows * cols) + i * cols + (j - 1)]) / k_sum(i, j, k, i, j - 1, k);}
+                    if (k + 1 == depth){k_front = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i, j, k + 1) == 0){k_front = 0;} else {k_front = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[((k+1) * rows * cols) + i * cols + j]) / k_sum(i, j, k, i, j, k + 1);}
+                    if (k - 1 < 0){k_back = conductivities[k * (rows * cols) + i * cols + j];}
+                    else if (k_sum(i, j, k, i, j, k - 1) == 0){k_back = 0;} else {k_back = (2 * conductivities[k * (rows * cols) + i * cols + j] * conductivities[((k-1) * rows * cols) + i * cols + j]) / k_sum(i, j, k, i, j, k - 1);}
+
+
+                    faces_k.push_back(k_up);
+                    faces_k.push_back(k_down);
+                    faces_k.push_back(k_right);
+                    faces_k.push_back(k_left);
+                    faces_k.push_back(k_front);
+                    faces_k.push_back(k_back);
+                    total_ks.push_back(k_up + k_down + k_right + k_left + k_front + k_back);
+                }
+            }
+        }
+    }
+
+    void initialize_active(){
+        for (int k = 0; k < depth; k++){
+            for (int i = 0; i < rows; i++){
+                for (int j = 0; j < cols; j++){
+                    if (total_ks[(k * rows * cols) + i * cols + j] > epsilon){active.push_back(1);}
+                    else{active.push_back(0);}
+                }
+            }
+        }
+    }
+
+public:
+
+    Grid3D(int r, int c, int d){
+        assert(r > 0 && c > 0 && d > 0);
+        rows = r; cols = c; depth = d;
+        for (int k = 0; k < depth; k++){
+            for (int i = 0; i < rows; i++){
+                for (int j = 0; j < cols; j++){
+                    temps.push_back(0);
+                    if (i == 0 || i == r - 1 || j == 0 || j == c - 1 || k == 0 || k == d - 1){cellTypes.push_back(FIXED);}
+                    else{cellTypes.push_back(INTERIOR);}
+                    conductivities.push_back(1);
+                } 
+            }
+        }
+        initialize_k(); initialize_active();
+    }
+};
+
 #endif
