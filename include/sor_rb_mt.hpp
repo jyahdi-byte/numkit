@@ -102,4 +102,96 @@ int sor_rb_mt_solve(Grid& g, double tol, int max_iter, int num_threads){
     return sor_rb_mt_solve(g, tol, max_iter, num_threads, omega);
 }
 
+void sor_rb_sweep_rows_r(Grid3D& g, int r_start, int r_end, double& localMax, double omega){
+    localMax = 0;
+    double change = 0;
+    for (int k = r_start; k < r_end; k++){
+        for (int i = 1; i < g.getRows() - 1; i++){
+                for (int j = 1; j < g.getCols() - 1; j++){
+                    double oldPoint = g.at(i,j,k);
+                    if (g.getType(i,j,k) == INTERIOR && (i + j + k) % 2 == 0){
+                            double avg = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, k, g.getRows(), g.getCols(), g.getDepth());
+                            double delta = omega * (avg - oldPoint);
+                            g.at(i,j,k) = oldPoint + delta;
+                            change = std::abs(delta);
+                            if (change >= localMax){
+                                localMax = change; 
+                            }
+                    }
+                }
+            }
+        } 
+}
+
+void sor_rb_sweep_rows_b(Grid3D& g, int r_start, int r_end, double& localMax, double omega){
+    localMax = 0;
+    double change = 0;
+    for (int k = r_start; k < r_end; k++){
+        for (int i = 1; i < g.getRows() - 1; i++){
+                for (int j = 1; j < g.getCols() - 1; j++){
+                    double oldPoint = g.at(i,j,k);
+                    if (g.getType(i,j,k) == INTERIOR && (i + j + k) % 2 == 1){
+                            double avg = update_cell(g.getTempsPtr(), g.getFacesKPtr(), g.getTotalKPtr(), g.getActivePtr(), i, j, k, g.getRows(), g.getCols(), g.getDepth());
+                            double delta = omega * (avg - oldPoint);
+                            g.at(i,j,k) = oldPoint + delta;
+                            change = std::abs(delta);
+                            if (change >= localMax){
+                                localMax = change; 
+                            }
+                    }
+                }
+            }
+        } 
+}
+
+void sor_rb_worker_job_3d(Grid3D& g, int r_start, int r_end, double& localMax, int max_iter, std::barrier<std::function<void()>>& sync_point, std::atomic<bool>& converged, double omega){
+    for (int n = 0; n < max_iter; n++){
+        if (converged.load()) return;
+        sor_rb_sweep_rows_r(g, r_start, r_end, localMax, omega);
+        sync_point.arrive_and_wait(); 
+        sor_rb_sweep_rows_b(g, r_start, r_end, localMax, omega);
+        sync_point.arrive_and_wait(); 
+    }
+}
+
+int sor_rb_mt_solve(Grid3D& g, double tol, int max_iter, int num_threads, double omega){
+    int interior = g.getDepth() - 2;
+    int chunk = interior / num_threads;
+    std::vector<double> localMaxes(num_threads, 0.0);
+    std::atomic<bool> converged{false};
+    int iters_done = 0;
+
+    // swap + tol check, runs once per round instead of every sweep spawning threads
+    int phase = 0;
+    double maxChange_r = 0;
+    double maxChange_b = 0;
+    std::function<void()> on_complete = [&](){
+        phase++;
+        if (phase % 2 == 1){maxChange_r = *std::max_element(localMaxes.begin(), localMaxes.end());}
+        else if (phase % 2 == 0){
+            maxChange_b = *std::max_element(localMaxes.begin(), localMaxes.end());
+            iters_done++;
+            double maxChange = std::max(maxChange_r, maxChange_b);
+            if (maxChange <= tol){ converged.store(true);}
+        }
+    };
+    std::barrier<std::function<void()>> sync_point(num_threads, on_complete);
+
+    std::vector<std::thread> workers;
+    for (int t = 0; t < num_threads; t++){
+        int r_start = 1 + t * chunk;
+        int r_end = (t == num_threads - 1) ? g.getDepth() - 1 : r_start + chunk;
+        workers.push_back(std::thread(sor_rb_worker_job_3d, std::ref(g), r_start, r_end, std::ref(localMaxes[t]), max_iter, std::ref(sync_point), std::ref(converged), omega));
+    }
+    for (auto& w : workers) w.join();
+
+    return iters_done;
+}
+
+int sor_rb_mt_solve(Grid3D& g, double tol, int max_iter, int num_threads){
+    double h = 1.0 / (g.getRows() - 1);
+    double omega = 2.0 / (1.0 + std::sin(std::numbers::pi * h));
+    return sor_rb_mt_solve(g, tol, max_iter, num_threads, omega);
+}
+
 #endif

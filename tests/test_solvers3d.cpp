@@ -8,7 +8,9 @@
 #include "sor.hpp"
 #include "jacobi_mt.hpp"
 #include "gauss_seidel_rb.hpp"
+#include "gauss_seidel_rb_mt.hpp"
 #include "sor_rb.hpp"
+#include "sor_rb_mt.hpp"
 #include "conjugate_gradient.hpp"
 
 int main() {
@@ -69,5 +71,35 @@ int main() {
     assert(g1.at(5,5,5) == g2.at(5,5,5) && g2.at(5,5,5) == g3.at(5,5,5) && g3.at(5,5,5) == g4.at(5,5,5) && g4.at(5,5,5) == g5.at(5,5,5)
             && g5.at(5,5,5) == g6.at(5,5,5) && g6.at(5,5,5) == g7.at(5,5,5) && g7.at(5,5,5) == g8.at(5,5,5) && g8.at(5,5,5) == g0.at(5,5,5));
 
-    std::cout << "PASS\n";
+    std::cout << "PASS (single-threaded solvers)\n\n";
+
+    // --- Multithreaded solvers: same manufactured solution, checked across thread counts ---
+    int thread_counts[] = {1, 3, 4, 5, 8};
+
+    for (int nt : thread_counts) {
+        Grid3D gj = g0;
+        Grid3D ggs = g0;
+        Grid3D gsr = g0;
+
+        int jac_mt = jacobi_mt_solve(gj, 1e-10, 10000, nt);
+        int gs_rb_mt = gauss_seidel_rb_mt_solve(ggs, 1e-10, 10000, nt);
+        int sor_rb_mt = sor_rb_mt_solve(gsr, 1e-10, 10000, nt);
+
+        std::cout << "[threads=" << nt << "] Jacobi-MT sweeps: " << jac_mt
+                  << "  GS-RB-MT sweeps: " << gs_rb_mt
+                  << "  SOR-RB-MT sweeps: " << sor_rb_mt << "\n";
+        std::cout << "[threads=" << nt << "] (3,6,6) Jacobi-MT: " << gj.at(3,6,6)
+                  << "  GS-RB-MT: " << ggs.at(3,6,6)
+                  << "  SOR-RB-MT: " << gsr.at(3,6,6) << "\n";
+
+        assert(std::abs(gj.at(3,6,6) - g1.at(3,6,6)) < 1e-6);
+        assert(std::abs(ggs.at(3,6,6) - g1.at(3,6,6)) < 1e-6);
+        assert(std::abs(gsr.at(3,6,6) - g1.at(3,6,6)) < 1e-6);
+
+        assert(gj.at(5,5,5) == g0.at(5,5,5));
+        assert(ggs.at(5,5,5) == g0.at(5,5,5));
+        assert(gsr.at(5,5,5) == g0.at(5,5,5));
+    }
+
+    std::cout << "PASS (multithreaded solvers)\n";
 }
