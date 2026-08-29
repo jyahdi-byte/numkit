@@ -40,7 +40,7 @@ int main() {
     std::cout << "diff near hole: " << std::abs(g1.at(3,4) - g1.at(2,4)) << "\n";
     assert(std::abs(g1.at(3,4) - g1.at(2,4)) < 1.0);
 
-
+ 
 
     std::cout << "PASS\n";
     return 0;

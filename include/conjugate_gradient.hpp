@@ -137,4 +137,149 @@ int pcg_solve(Grid& A, double tol, int iterations){
     return sweeps;
 }
 
+std::vector<double> compute_b(const Grid3D& g) {
+    int rows = g.getRows();
+    int cols = g.getCols();
+    int depth = g.getDepth();
+    std::vector<double> b(rows * cols * depth, 0.0);
+
+    for (int k = 1; k < depth - 1; k++){
+        for (int i = 1; i < rows - 1; i++) {
+            for (int j = 1; j < cols - 1; j++) {
+                if (g.getType(i, j, k) == INTERIOR) {
+                    double sum = 0;
+                    if (g.getType(i + 1, j, k) == FIXED) {sum += g.getFacesK(i, j, k, 0) * g.at(i + 1, j, k);}
+                    if (g.getType(i - 1, j, k) == FIXED) {sum += g.getFacesK(i, j, k, 1) * g.at(i - 1, j, k);}
+                    if (g.getType(i, j + 1, k) == FIXED) {sum += g.getFacesK(i, j, k, 2) * g.at(i, j + 1, k);}
+                    if (g.getType(i, j - 1, k) == FIXED) {sum += g.getFacesK(i, j, k, 3) * g.at(i, j - 1, k);}
+                    if (g.getType(i, j, k + 1) == FIXED) {sum += g.getFacesK(i, j, k, 4) * g.at(i, j, k + 1);}
+                    if (g.getType(i, j, k - 1) == FIXED) {sum += g.getFacesK(i, j, k, 5) * g.at(i, j, k - 1);}
+                    b[(k * rows * cols) + i * cols + j] = sum;
+                }
+            }
+        }
+    }
+    return b;
+} 
+
+std::vector<double> apply_A(const std::vector<double>& p, int rows, int cols, int depth, const Grid3D& A){
+    std::vector<double> result(rows * cols * depth, 0.0);
+    for (int k = 1; k < depth - 1; k++){
+        for (int i = 1; i < rows - 1; i++) {
+            for (int j = 1; j < cols - 1; j++) {
+                if (A.getType(i, j, k) == INTERIOR) {
+                    std::vector<double> components = {p[(k * rows * cols) + (i+1) * cols + j], p[(k * rows * cols) + (i-1) * cols + j],
+                                                      p[(k * rows * cols) + i * cols + j + 1], p[(k * rows * cols) + i * cols + j - 1],
+                                                      p[((k+1) * rows * cols) + i * cols + j], p[((k-1) * rows * cols) + i * cols + j]};
+
+                    double sum = (A.getFacesK(i, j, k, 0) * components[0] + A.getFacesK(i, j, k, 1) * components[1] + 
+                                  A.getFacesK(i, j, k, 2) * components[2] + A.getFacesK(i, j, k, 3) * components[3] +
+                                  A.getFacesK(i, j, k, 4) * components[4] + A.getFacesK(i, j, k, 5) * components[5]);
+                    double center = p[(k * rows * cols) + i * cols + j];
+                    result[(k * rows * cols) + i * cols + j] = A.getTotalK(i, j, k) * center - sum;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+int cg_solve(Grid3D& A, double tol, int iterations){
+    int sweeps = 0;
+    int rows = A.getRows(); int cols = A.getCols(); int depth = A.getDepth();
+    std::vector<double> x(rows * cols * depth); std::vector<double> r_new(rows * cols * depth);
+    for (int k = 0; k < depth; k++)
+        for (int i = 0; i < rows; i++)
+            for (int j = 0; j < cols; j++){x[(k * rows * cols) + i * cols + j] = 0;}
+    std::vector<double> b = compute_b(A);
+    std::vector<double> r = b;
+    std::vector<double> p = r;
+    for (int n = 0; n < iterations; n++){
+        std::vector<double> Ap = apply_A(p, rows, cols, depth, A);
+        double alpha = dot(r, r) / dot(p, Ap);
+        for (int i = 0; i < (int)x.size(); i++){x[i] += alpha * p[i];}
+        sweeps++;
+        for (int i = 0; i < (int)r_new.size(); i++){r_new[i] = r[i] + (-alpha * Ap[i]);}
+        double beta = dot(r_new, r_new) / dot(r, r);
+        for (int i = 0; i < (int)p.size(); i++){p[i] = r_new[i] + beta * p[i];}
+        r = r_new;
+        if (tol > std::sqrt(dot(r,r))){
+            for (int k = 0; k < depth; k++){
+                for (int i = 0; i < rows; i++){
+                    for (int j = 0; j < cols; j++){
+                        if (A.getType(i, j, k) == INTERIOR){A.at(i, j, k) = x[(k * rows * cols) + i * cols + j];}
+                    }
+                }
+            }
+            return sweeps;
+        }
+    }
+    for (int k = 0; k < depth; k++){
+        for (int i = 0; i < rows; i++){
+            for (int j = 0; j < cols; j++){
+                if (A.getType(i, j, k) == INTERIOR){A.at(i, j, k) = x[(k * rows * cols) + i * cols + j];}
+            }
+        }
+    }
+    return sweeps;
+}
+
+int pcg_solve(Grid3D& A, double tol, int iterations){
+    int sweeps = 0;
+    int rows = A.getRows(); int cols = A.getCols(); int depth = A.getDepth();
+    std::vector<double> x(rows * cols * depth); std::vector<double> r_new(rows * cols * depth);
+    for (int k = 0; k < depth; k++)
+        for (int i = 0; i < rows; i++)
+            for (int j = 0; j < cols; j++){x[(k * rows * cols) + i * cols + j] = 0;}
+    std::vector<double> b = compute_b(A);
+    std::vector<double> r = b;
+    std::vector<double> z = r;
+    for (int k = 1; k < depth - 1; k++){
+        for (int i = 1; i < rows - 1; i++){
+            for (int j = 1; j < cols - 1; j++){
+                if (A.getType(i, j, k) == INTERIOR){
+                    z[(k * rows * cols) + i * cols + j] /= A.getTotalK(i, j, k);
+                }
+            }
+        }
+    }
+    std::vector<double> p = z;
+    for (int n = 0; n < iterations; n++){
+        std::vector<double> Ap = apply_A(p, rows, cols, depth, A);
+        double alpha = dot(r, z) / dot(p, Ap);
+        for (int i = 0; i < (int)x.size(); i++){x[i] += alpha * p[i];}
+        sweeps++;
+        for (int i = 0; i < (int)r_new.size(); i++){r_new[i] = r[i] + (-alpha * Ap[i]);}
+        std::vector<double> z_new = r_new;
+        for (int k = 1; k < depth - 1; k++){
+            for (int i = 1; i < rows - 1; i++){
+                for (int j = 1; j < cols - 1; j++){
+                    if (A.getType(i, j, k) == INTERIOR){z_new[(k * rows * cols) + i * cols + j] /= A.getTotalK(i, j, k);}
+                }
+            }
+        }
+        double beta = dot(r_new, z_new) / dot(r, z);
+        for (int i = 0; i < (int)p.size(); i++){p[i] = z_new[i] + beta * p[i];}
+        r = r_new; z = z_new;
+        if (tol > std::sqrt(dot(r,r))){
+            for (int k = 0; k < depth; k++){
+                for (int i = 0; i < rows; i++){
+                    for (int j = 0; j < cols; j++){
+                        if (A.getType(i, j, k) == INTERIOR){A.at(i, j, k) = x[(k * rows * cols) + i * cols + j];}
+                    }
+                }
+            }
+            return sweeps;
+        }
+    }
+    for (int k = 0; k < depth; k++){
+        for (int i = 0; i < rows; i++){
+            for (int j = 0; j < cols; j++){
+                if (A.getType(i, j, k) == INTERIOR){A.at(i, j, k) = x[(k * rows * cols) + i * cols + j];}
+            }
+        }
+    }
+    return sweeps;
+}
+
 #endif
