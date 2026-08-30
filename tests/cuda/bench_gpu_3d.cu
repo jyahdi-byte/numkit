@@ -71,7 +71,7 @@ int main(){
         times.push_back(ms);
     }
     std::cout << "\n";
-    std::cout << "Mean Elapsed Time: " << mean(times) << "\n";
+    std::cout << "Median Elapsed Time: " << median(times) << "\n";
     std::cout << "Elapsed Time Standard Deviation: " << dev(times) << "\n";
 
     CUDA_CHECK(cudaFree(d_old));

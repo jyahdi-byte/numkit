@@ -79,14 +79,14 @@ int main(){
         blockSizes.push_back(blockSize);
         times.clear();
     }
-    double min_value = *std::min_element(meanTimes.begin(), meanTimes.end());
-    auto min_iterator = std::min_element(meanTimes.begin(), meanTimes.end());
-    int min_index = std::distance(meanTimes.begin(), min_iterator);
+    double min_value = *std::min_element(medianTimes.begin(), medianTimes.end());
+    auto min_iterator = std::min_element(medianTimes.begin(), medianTimes.end());
+    int min_index = std::distance(medianTimes.begin(), min_iterator);
 
     std::cout << "\n";
-    std::cout << "Mean of Mean Elapsed Times: " << mean(meanTimes) << "\n";
+    std::cout << "Median of Median Elapsed Times: " << median(medianTimes) << "\n";
     std::cout << "Mean of Standard Deviation Elapsed Times: " << dev(devTimes) << "\n";
-    std::cout << "Fastest Block Size: " << blockSizes[min_index] << " Mean Time: " << min_value << " Standard Deviation: " << devTimes[min_index] << "\n";
+    std::cout << "Fastest Block Size: " << blockSizes[min_index] << " Median Time: " << min_value << " Standard Deviation: " << devTimes[min_index] << "\n";
 
     CUDA_CHECK(cudaFree(d_old));
     CUDA_CHECK(cudaFree(d_new));

@@ -45,5 +45,13 @@ double max_index(std::vector<double>& vec){
     return result;
 }
 
+inline double median(std::vector<double> vec){
+    std::sort(vec.begin(), vec.end());
+    int mid = vec.size() / 2;
+    if (vec.size() % 2 == 0){
+        return (vec[mid - 1] + vec[mid]) / 2.0;
+    }
+    return vec[mid];
+}
 
 #endif
