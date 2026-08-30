@@ -35,7 +35,7 @@ int main(){
     CUDA_CHECK(cudaMemcpy(d_faces_k, g.getFacesKPtr(), 6 * n * sizeof(double), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_total_ks, g.getTotalKPtr(), n * sizeof(double), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_active, g.getActivePtr(), n * sizeof(unsigned char), cudaMemcpyHostToDevice));
-    std::vector<double> meanTimes;
+    std::vector<double> medianTimes;
     std::vector<double> devTimes;
     std::vector<int> blockSizes;
 
@@ -74,7 +74,7 @@ int main(){
             std::cout << "Elapsed: " << ms << " ms for " << sweeps << " sweeps, block " << blockSize << "\n";
             times.push_back(ms);
         }
-        meanTimes.push_back(mean(times));
+        medianTimes.push_back(median(times));
         devTimes.push_back(dev(times));
         blockSizes.push_back(blockSize);
         times.clear();
