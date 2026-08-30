@@ -87,3 +87,11 @@ test_jacobi3d.exe: include/grid.hpp include/jacobi.hpp tests/test_jacobi3d.cpp
 
 test_solvers3d.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/gauss_seidel_rb_mt.hpp include/sor_rb.hpp include/sor_rb_mt.hpp include/conjugate_gradient.hpp tests/test_solvers3d.cpp
 	g++ -std=c++20 -Wall -pthread -I include tests/test_solvers3d.cpp -o test_solvers3d.exe
+
+bench-gpu-3d: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp tests/cuda/bench_gpu_3d.cu
+	nvcc -std=c++20 -I include -O3 -arch=sm_75 tests/cuda/bench_gpu_3d.cu -o bench_gpu_3d.exe
+	./bench_gpu_3d.exe
+
+bench-tiled-sweep-3d: include/grid.hpp include/jacobi_tiled_kernel.cuh include/stats.hpp tests/cuda/bench_tiled_sweep_3d.cu
+	nvcc -std=c++20 -I include -O3 -arch=sm_75 tests/cuda/bench_tiled_sweep_3d.cu -o bench_tiled_sweep_3d.exe
+	./bench_tiled_sweep_3d.exe
