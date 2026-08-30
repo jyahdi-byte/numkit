@@ -71,6 +71,10 @@ jacobi-convergence: include/grid.hpp include/jacobi.hpp include/jacobi_tiled_ker
 	nvcc -std=c++20 -I include tests/cuda/jacobi_convergence.cu -o jacobi_convergence.exe
 	./jacobi_convergence.exe
 
+cuda-solvers-validate-3d: include/grid.hpp include/jacobi.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp include/jacobi_kernel.cuh include/gauss_seidel_rb_kernel.cuh include/sor_rb_kernel.cuh include/jacobi_tiled_kernel.cuh tests/cuda/cuda_solvers_validate_3d.cu
+	nvcc -std=c++20 -I include tests/cuda/cuda_solvers_validate_3d.cu -o cuda_solvers_validate_3d.exe
+	./cuda_solvers_validate_3d.exe
+
 bench_cpu.exe: include/grid.hpp include/stats.hpp include/n_jacobi.hpp tests/bench_cpu.cpp
 	g++ -std=c++20 -Wall -O2 -I include tests/bench_cpu.cpp -o bench_cpu.exe
 	./bench_cpu.exe
