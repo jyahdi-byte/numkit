@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <cassert>
+#include <algorithm>
 
 inline double mean(const std::vector<double>& vec){
     double sum  = 0;
