@@ -402,7 +402,7 @@ public:
      // --- cell type ---
 
     void setType(int i, int j, int k, CellType type){
-        assert(i >= 0 && i < rows && j >= 0 && j < cols && k >- 0 && k < depth);
+        assert(i >= 0 && i < rows && j >= 0 && j < cols && k >= 0 && k < depth);
         cellTypes[(k * rows * cols) + i * cols + j] = type;
         if (type == HOLE){
             conductivities[(k * rows * cols) + i * cols + j] = 0;
