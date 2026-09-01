@@ -19,6 +19,7 @@ jobs:
           ./test_jacobi.exe
           ./test_grid3d.exe
           ./test_jacobi3d.exe
+          ./test_slice_grid3d.exe
 
   cuda-compile-check:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe pcg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_grid.exe test_jacobi.exe test_rb_mt.exe test_grid3d.exe test_jacobi3d.exe test_solvers3d.exe
+all: test_solvers.exe omega_sweep.exe red_black_sweep.exe cg_sweep.exe pcg_sweep.exe heat.exe validate.exe test_mt.exe bench_mt.exe test_omega_auto.exe test_grid.exe test_jacobi.exe test_rb_mt.exe test_grid3d.exe test_jacobi3d.exe test_solvers3d.exe test_slice_grid3d.exe
 
 test_solvers.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/sor_rb.hpp include/conjugate_gradient.hpp tests/test_solvers.cpp
 	g++ -std=c++20 -Wall -I include tests/test_solvers.cpp -o test_solvers.exe
@@ -87,6 +87,9 @@ test_jacobi3d.exe: include/grid.hpp include/jacobi.hpp tests/test_jacobi3d.cpp
 
 test_solvers3d.exe: include/grid.hpp include/jacobi.hpp include/gauss_seidel.hpp include/sor.hpp include/jacobi_mt.hpp include/gauss_seidel_rb.hpp include/gauss_seidel_rb_mt.hpp include/sor_rb.hpp include/sor_rb_mt.hpp include/conjugate_gradient.hpp tests/test_solvers3d.cpp
 	g++ -std=c++20 -Wall -pthread -I include tests/test_solvers3d.cpp -o test_solvers3d.exe
+
+test_slice_grid3d.exe: include/grid.hpp include/slice_grid.hpp tests/test_slice_grid3d.cpp
+	g++ -std=c++20 -Wall -I include tests/test_slice_grid3d.cpp -o test_slice_grid3d.exe
 
 bench-gpu-3d: include/grid.hpp include/jacobi_kernel.cuh include/stats.hpp tests/cuda/bench_gpu_3d.cu
 	nvcc -std=c++20 -I include -O3 -arch=sm_75 tests/cuda/bench_gpu_3d.cu -o bench_gpu_3d.exe
