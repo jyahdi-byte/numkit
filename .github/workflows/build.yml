@@ -19,6 +19,9 @@ jobs:
           ./test_jacobi.exe
           ./test_grid3d.exe
           ./test_jacobi3d.exe
+          ./test_gauss_seidel3d.exe
+          ./test_sor3d.exe
+          ./test_solvers3d.exe
           ./test_slice_grid3d.exe
 
   cuda-compile-check:
@@ -36,8 +39,9 @@ jobs:
       # the CUDA code compiles (catches syntax/type errors on every push)
       # but CANNOT execute the kernels or verify assertions in
       # tests/cuda/grid_transfer_test.cu, tests/cuda/jacobi_validate.cu,
-      # tests/cuda/bench_gpu.cu, tests/cuda/jacobi_tiled_validate.cu, or
-      # tests/cuda/cuda_solvers_validate_3d.cu. Actual test
+      # tests/cuda/bench_gpu.cu, tests/cuda/jacobi_tiled_validate.cu,
+      # tests/cuda/cuda_solvers_validate_3d.cu, tests/cuda/bench_gpu_3d.cu,
+      # or tests/cuda/bench_tiled_sweep_3d.cu. Actual test
       # runs happen locally on a GPU (Colab) before trusting a commit.
       - name: Compile CUDA tests (build-check only, not run)
         run: |
@@ -50,3 +54,5 @@ jobs:
           nvcc -std=c++20 -I include tests/cuda/gauss_seidel_rb_validate.cu -o gauss_seidel_rb_validate.exe
           nvcc -std=c++20 -I include tests/cuda/sor_rb_validate.cu -o sor_rb_validate.exe
           nvcc -std=c++20 -I include tests/cuda/cuda_solvers_validate_3d.cu -o cuda_solvers_validate_3d.exe
+          nvcc -std=c++20 -I include -O3 -arch=sm_75 tests/cuda/bench_gpu_3d.cu -o bench_gpu_3d
+          nvcc -std=c++20 -I include -O3 -arch=sm_75 tests/cuda/bench_tiled_sweep_3d.cu -o bench_tiled_sweep_3d
