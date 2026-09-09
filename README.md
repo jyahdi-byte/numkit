@@ -215,7 +215,18 @@ A halo-loading bug in the tiled kernel (ragged block sizes) was caught by the CP
 ### 3D CUDA kernels
 All four kernels — `jacobi_kernel`, `gauss_seidel_rb_kernel` (red/black), `sor_rb_kernel` (red/black) — are overloaded for `Grid3D`, using a flattened 1D thread index over the interior with plane-based unflattening back to (i, j, k); red-black parity extends naturally to `(i + j + k) % 2`. `jacobi_tiled_kernel` was redesigned for 3D with a 3D block/shared-memory tile and 6-face halo loading (up/down/left/right/front/back), replacing the 2D version's 4-face halo.
 
-All four 3D kernels are cross-validated against the single-threaded `Grid3D` CPU solvers in `tests/cuda/cuda_solvers_validate_3d.cu` and pass on GPU hardware (Jacobi 325 sweeps, Gauss-Seidel-RB 169 sweeps, SOR-RB 37 sweeps, tiled-vs-untiled agreement over 5000 sweeps). Timing benchmarks for the 3D kernels (`tests/cuda/bench_gpu_3d.cu`, `tests/cuda/bench_tiled_sweep_3d.cu`) exist alongside their 2D counterparts but don't yet have a written results table here — see `docs/gpu_speedup_study.md` for the 2D numbers this would extend.
+All four 3D kernels are cross-validated against the single-threaded `Grid3D` CPU solvers in `tests/cuda/cuda_solvers_validate_3d.cu` and pass on GPU hardware (Jacobi 325 sweeps, Gauss-Seidel-RB 169 sweeps, SOR-RB 37 sweeps, tiled-vs-untiled agreement over 5000 sweeps).
+
+**40×40×40 fixed-work benchmark (Tesla T4)**
+
+| Implementation       |  Median time | Speedup vs. CPU |
+|-----------------------|-------------:|-----------------:|
+| CPU (single thread)   |  3216.47 ms |            1.00× |
+| CUDA naive            |   111.37 ms |           28.9×  |
+| CUDA shared-memory    |  **100.09 ms** |       **32.1×** |
+
+The bigger grid changes the picture completely: 64,000 points against the 2D study's 10,000 means each launch does over six times more work for the same fixed launch cost, and the speedup jumps from 1.32× to over 30×, confirming what the 2D study predicted would happen at scale. The block-size result runs the other way, though — the fastest tiled configuration was block size 4, not 8, likely because block 8's shared-memory footprint (`10³` doubles vs. block 4's `6³`) limits how many blocks fit on an SM at once. That's a hypothesis pending an actual occupancy profile.
+→ [`docs/gpu_speedup_study_3d.md`](docs/gpu_speedup_study_3d.md)
 
 ---
 
@@ -343,7 +354,8 @@ Natural next steps that build on the existing architecture:
 - Stronger statistical controls for benchmarks
 - Sparse-matrix representations for larger problem sizes
 - More effective preconditioners for irregular and variable-coefficient systems
-- 3D CUDA benchmark results written up (kernels exist and are validated; timing study is not yet documented)
+- SM occupancy profiling to confirm why the 3D tiled kernel's smallest block size outperformed the larger ones
+- A second 3D grid size to locate where the speedup curve plateaus as memory bandwidth, not launch overhead, becomes the bottleneck
 
 ---
 
@@ -355,6 +367,7 @@ Natural next steps that build on the existing architecture:
 - [`docs/threading_study.md`](docs/threading_study.md) — CPU scaling behavior
 - [`docs/conjugate_gradient_study.md`](docs/conjugate_gradient_study.md) — CG and preconditioning
 - [`docs/gpu_speedup_study.md`](docs/gpu_speedup_study.md) — CPU vs. CUDA performance analysis
+- [`docs/gpu_speedup_study_3d.md`](docs/gpu_speedup_study_3d.md) — same comparison at 3D grid scale
 
 ---
 
