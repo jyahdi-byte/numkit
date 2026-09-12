@@ -480,4 +480,29 @@ public:
     }
 };
 
+template <int N>
+
+class GridND {
+private:
+    std::array<int, N> extents;
+    std::vector<double> temps;
+    std::vector<double> conductivities;
+    std::vector<CellType> cellTypes;
+    std::vector<unsigned char> active;
+
+public:
+    GridND(std::array<int, N> ext){
+        int size = 1;
+        for (int i = 0; i < N; i++){
+            assert(ext[i] > 0);
+            extents[i] = ext[i];
+            size *= ext[i];
+        }
+        temps.resize(size, 0.0);
+        conductivities.resize(size, 1.0);
+        cellTypes.resize(size, INTERIOR);
+        active.resize(size, 1);
+    }
+};
+
 #endif
