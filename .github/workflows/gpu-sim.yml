@@ -1,0 +1,81 @@
+name: GPU Simulator
+
+# Optional check. The hosted runners have no GPU, so this builds the CUDA
+# validation programs in tests/cuda and runs them on a simulated NVIDIA H100
+# (https://github.com/pantheongpu/pantheonsim). A simulator cannot reproduce
+# hardware-specific behavior or timing, so it complements real-GPU testing.
+# The bench_* programs are timing studies and are not run here.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "include/**"
+      - "tests/cuda/**"
+      - "Makefile"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cuda-validate:
+    name: CUDA validation (CUDA 13.0 and simulated H100)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Set up the simulated GPU and CUDA toolkit
+        uses: pantheongpu/setup-pantheonsim@deff5781e8adfd83dec98dd5242dcbc96a564773 # v0.1.10
+        with:
+          gpu: nvidia/h100
+          cuda-toolkit: "13.0"
+
+      # The simulator runs PTX only (compute_90) and needs a shared CUDA
+      # runtime. Same sources and flags as the Makefile targets, plus
+      # -arch=compute_90 -cudart shared.
+      - name: Build
+        run: |
+          mkdir -p out
+          for t in grid_transfer_test jacobi_validate jacobi_tiled_validate \
+                   gauss_seidel_rb_validate sor_rb_validate jacobi_convergence \
+                   cuda_solvers_validate_3d; do
+            nvcc -std=c++20 -arch=compute_90 -cudart shared -I include \
+                 tests/cuda/$t.cu -o out/$t.exe
+          done
+
+      # Each program compares the GPU result with the CPU solver and asserts
+      # (or, for jacobi_convergence, prints the error against the analytic
+      # solution), so a GPU that returned zeros or garbage fails. The guard
+      # fails the job on a missing device, a simulator error or a nonzero exit.
+      - name: Run on the simulated GPU
+        run: |
+          set -o pipefail
+          fail=0
+          for t in grid_transfer_test jacobi_validate jacobi_tiled_validate \
+                   gauss_seidel_rb_validate sor_rb_validate jacobi_convergence \
+                   cuda_solvers_validate_3d; do
+            echo "::group::$t"
+            start=$(date +%s)
+            if ! vgpu run ./out/$t.exe 2>&1 | tee out/$t.log; then
+              echo "::error::$t exited nonzero"; fail=1
+            fi
+            echo "$t took $(( $(date +%s) - start )) s"
+            if grep -Eiq 'VirtualGPU error|no CUDA-capable device|no device|CUDA error|Assertion' out/$t.log; then
+              echo "::error::GPU error in $t output"; fail=1
+            fi
+            echo "::endgroup::"
+          done
+          grep -q 'grid_transfer_test: PASS' out/grid_transfer_test.log
+          grep -q 'ALL 3D CUDA KERNELS PASS' out/cuda_solvers_validate_3d.log
+          test "$(grep -c '^PASS' out/cuda_solvers_validate_3d.log)" -eq 4
+          test "$(grep -c '^Grid Size' out/jacobi_convergence.log)" -eq 4
+          exit $fail
